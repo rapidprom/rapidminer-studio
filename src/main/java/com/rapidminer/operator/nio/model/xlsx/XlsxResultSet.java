@@ -58,11 +58,10 @@ import com.rapidminer.tools.I18N;
 import com.rapidminer.tools.LogService;
 import com.rapidminer.tools.ProgressListener;
 
-
 /**
- * A DataResultSet for an Excel 2007 files (XLSX). It uses StAX parsers based on the file format
- * definitions of ECMA-376, 4th Edition to parse configuration and worksheet content from XML files
- * stored within a XLSX file.
+ * A DataResultSet for an Excel 2007 files (XLSX). It uses StAX parsers based on
+ * the file format definitions of ECMA-376, 4th Edition to parse configuration
+ * and worksheet content from XML files stored within a XLSX file.
  *
  * @author Nils Woehler
  * @since 6.3.0
@@ -75,9 +74,10 @@ public class XlsxResultSet implements DataResultSet {
 	public static enum XlsxReadMode {
 		WIZARD_WORKPANE, WIZARD_PREVIEW, OPERATOR,
 		/**
-		 * Specifies that the {@link XlsxResultSet} was created to display preview content in the
-		 * sheet selection step of the new data import dialog. If used the
-		 * {@link XlsxSheetTableModel} will load a data preview instead of the full sheet content.
+		 * Specifies that the {@link XlsxResultSet} was created to display
+		 * preview content in the sheet selection step of the new data import
+		 * dialog. If used the {@link XlsxSheetTableModel} will load a data
+		 * preview instead of the full sheet content.
 		 */
 		WIZARD_SHEET_SELECTION
 	}
@@ -85,7 +85,7 @@ public class XlsxResultSet implements DataResultSet {
 	/**
 	 * The factory used to create XML StAX streams.
 	 */
-	private static final XMLInputFactory XML_STREAM_FACTORY = XMLInputFactory.newFactory();
+	private static final XMLInputFactory XML_STREAM_FACTORY = XMLInputFactory.newInstance();
 
 	static {
 		XML_STREAM_FACTORY.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false);
@@ -93,11 +93,16 @@ public class XlsxResultSet implements DataResultSet {
 		XML_STREAM_FACTORY.setProperty(XMLInputFactory.IS_COALESCING, true);
 
 		// Re-enable once we can use Aalto or Woodstox parser
-		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_LAZY_PARSING, true);
-		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_INTERN_NAMES, true);
-		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_INTERN_NS_URIS, true);
-		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_PRESERVE_LOCATION, false);
-		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_REPORT_PROLOG_WHITESPACE, false);
+		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_LAZY_PARSING,
+		// true);
+		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_INTERN_NAMES,
+		// true);
+		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_INTERN_NS_URIS,
+		// true);
+		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_PRESERVE_LOCATION,
+		// false);
+		// XML_STREAM_FACTORY.setProperty(XMLInputFactory2.P_REPORT_PROLOG_WHITESPACE,
+		// false);
 	}
 
 	/**
@@ -111,10 +116,11 @@ public class XlsxResultSet implements DataResultSet {
 	private static final String BOOLEAN_TRUE = "true";
 
 	/**
-	 * Format used to format numbers that should be used as text (nominal) values. This will prevent
-	 * scientific notation like '1.12123E12'. Instead it will return '1121230000000'. Numbers with
-	 * fractions will be display with up to 30 fraction digits (specified by the number of # after
-	 * the dot).
+	 * Format used to format numbers that should be used as text (nominal)
+	 * values. This will prevent scientific notation like '1.12123E12'. Instead
+	 * it will return '1121230000000'. Numbers with fractions will be display
+	 * with up to 30 fraction digits (specified by the number of # after the
+	 * dot).
 	 */
 	private final DecimalFormat decimalFormat = new DecimalFormat("#.##############################");
 
@@ -125,16 +131,21 @@ public class XlsxResultSet implements DataResultSet {
 	private final XlsxSheetContentParser worksheetParser;
 
 	/**
-	 * The {@link DateFormatProvider} used to parse cells that contain date entries
+	 * The {@link DateFormatProvider} used to parse cells that contain date
+	 * entries
 	 */
 	private final DateFormatProvider dateFormatProvider;
 
 	/**
-	 * The parsed sheet meta data which, e.g., contains information about the cell range to parse.
+	 * The parsed sheet meta data which, e.g., contains information about the
+	 * cell range to parse.
 	 */
 	private final XlsxSheetMetaData sheetMetaData;
 
-	/** Defines whether reading is done from the Read Excel operator or from a Wizard */
+	/**
+	 * Defines whether reading is done from the Read Excel operator or from a
+	 * Wizard
+	 */
 	private final XlsxReadMode readMode;
 
 	/** The content of the parsed workbook file */
@@ -147,20 +158,22 @@ public class XlsxResultSet implements DataResultSet {
 	private int progressCounter = 0;
 
 	/**
-	 * Configures the Excel result set with the provided configuration object. Also parses multiple
-	 * XML configuration files included in the XLSX file and creates the worksheet parser.
+	 * Configures the Excel result set with the provided configuration object.
+	 * Also parses multiple XML configuration files included in the XLSX file
+	 * and creates the worksheet parser.
 	 *
 	 * @param callingOperator
-	 *            the calling operator. <code>null</code> is allowed in case the class isn't created
-	 *            from within an operator.
+	 *            the calling operator. <code>null</code> is allowed in case the
+	 *            class isn't created from within an operator.
 	 * @param configuration
 	 *            the result set configuration
 	 * @param provider
-	 *            a {@link DateFormatProvider}, can be {@code null} in which case the date format is
-	 *            fixed by the current value of {@link configuration#getDatePattern()}
+	 *            a {@link DateFormatProvider}, can be {@code null} in which
+	 *            case the date format is fixed by the current value of
+	 *            {@link configuration#getDatePattern()}
 	 * @throws UserError
-	 *             in case something is configured in a wrong way so that the XLSX file cannot be
-	 *             parsed
+	 *             in case something is configured in a wrong way so that the
+	 *             XLSX file cannot be parsed
 	 */
 	public XlsxResultSet(Operator callingOperator, final ExcelResultSetConfiguration configuration, int sheetIndex,
 			XlsxReadMode readMode, final DateFormatProvider provider) throws UserError {
@@ -176,29 +189,34 @@ public class XlsxResultSet implements DataResultSet {
 			XlsxWorkbookRel workbookRelations;
 			try (ZipFile zipFile = new ZipFile(xlsxFile)) {
 
-				// Parse workbook XML which contains a list of sheets with name, rId, sheetId
+				// Parse workbook XML which contains a list of sheets with name,
+				// rId, sheetId
 				xlsxWorkbook = new XlsxWorkbookParser().parseZipEntry(zipFile);
 
-				// Parse workbook relations XML which contains the path of shared strings
+				// Parse workbook relations XML which contains the path of
+				// shared strings
 				// and the mapping of relationship IDs and paths of worksheets
-				XlsxWorkbookRelationParser xlsxWorkbookRelHandler = new XlsxWorkbookRelationParser(callingOperator, zipFile,
-						xlsxWorkbook.xlsxWorkbookSheets, sheetIndex);
+				XlsxWorkbookRelationParser xlsxWorkbookRelHandler = new XlsxWorkbookRelationParser(callingOperator,
+						zipFile, xlsxWorkbook.xlsxWorkbookSheets, sheetIndex);
 				workbookRelations = xlsxWorkbookRelHandler.parseZipEntry(zipFile);
 			}
 
-			this.sheetMetaData = new XlsxSheetMetaDataParser(xlsxFile, workbookRelations.worksheetsPath, XML_STREAM_FACTORY)
-					.parseMetaData(callingOperator, configuration, readMode);
+			this.sheetMetaData = new XlsxSheetMetaDataParser(xlsxFile, workbookRelations.worksheetsPath,
+					XML_STREAM_FACTORY).parseMetaData(callingOperator, configuration, readMode);
 
 			// Check if sheet is empty.
-			// Wizards should also be able to show empty sheets so also check if we are running from
+			// Wizards should also be able to show empty sheets so also check if
+			// we are running from
 			// an operator.
 			if (readMode == XlsxReadMode.OPERATOR
 					&& (sheetMetaData.getLastColumnIndex() < 0 || sheetMetaData.getLastRowIndex() < 0)) {
 				throw new UserError(callingOperator, 404);
 			}
 
-			// Do not use encoding from ExcelResultSetConfiguration but always use UTF-8
-			// as UTF-8 is default XLSX encoding: https://msdn.microsoft.com/en-us/library/bb507946
+			// Do not use encoding from ExcelResultSetConfiguration but always
+			// use UTF-8
+			// as UTF-8 is default XLSX encoding:
+			// https://msdn.microsoft.com/en-us/library/bb507946
 			Charset encoding = StandardCharsets.UTF_8;
 
 			// Parse shared strings file (only if it exists)
@@ -269,17 +287,18 @@ public class XlsxResultSet implements DataResultSet {
 	}
 
 	/**
-	 * Configures the Excel result set with the provided configuration object. Also parses multiple
-	 * XML configuration files included in the XLSX file and creates the worksheet parser.
+	 * Configures the Excel result set with the provided configuration object.
+	 * Also parses multiple XML configuration files included in the XLSX file
+	 * and creates the worksheet parser.
 	 *
 	 * @param callingOperator
-	 *            the calling operator. <code>null</code> is allowed in case the class isn't created
-	 *            from within an operator.
+	 *            the calling operator. <code>null</code> is allowed in case the
+	 *            class isn't created from within an operator.
 	 * @param configuration
 	 *            the result set configuration
 	 * @throws UserError
-	 *             in case something is configured in a wrong way so that the XLSX file cannot be
-	 *             parsed
+	 *             in case something is configured in a wrong way so that the
+	 *             XLSX file cannot be parsed
 	 */
 	public XlsxResultSet(Operator callingOperator, ExcelResultSetConfiguration configuration, int sheetIndex,
 			XlsxReadMode readMode) throws UserError {
@@ -314,32 +333,32 @@ public class XlsxResultSet implements DataResultSet {
 			return null;
 		}
 		switch (getCellType(columnIndex)) {
-			case NUMBER:
-			case DATE:
-				// XLSX stores dates as double values
-				double dateAsDouble = Double.parseDouble(dateValue);
+		case NUMBER:
+		case DATE:
+			// XLSX stores dates as double values
+			double dateAsDouble = Double.parseDouble(dateValue);
 
-				// Use POI methods to convert value to Date java object
-				if (DateUtil.isValidExcelDate(dateAsDouble)) {
-					return DateUtil.getJavaDate(dateAsDouble, xlsxWorkbook.isDate1904);
-				} else {
-					throw new ParseException(new ParsingError(getCurrentRow() + 1, columnIndex,
-							ParsingError.ErrorCode.UNPARSEABLE_DATE, dateValue));
-				}
-			case INLINE_STRING:
-			case SHARED_STRING:
-			case STRING:
-				// In case a date is stored as String, we try to parse it here
-				String dateString = dateValue;
-				try {
-					return dateFormatProvider.geDateFormat().parse(dateString);
-				} catch (java.text.ParseException e) {
-					throw new ParseException(new ParsingError(getCurrentRow() + 1, columnIndex,
-							ParsingError.ErrorCode.UNPARSEABLE_DATE, dateString));
-				}
-			default:
+			// Use POI methods to convert value to Date java object
+			if (DateUtil.isValidExcelDate(dateAsDouble)) {
+				return DateUtil.getJavaDate(dateAsDouble, xlsxWorkbook.isDate1904);
+			} else {
 				throw new ParseException(new ParsingError(getCurrentRow() + 1, columnIndex,
 						ParsingError.ErrorCode.UNPARSEABLE_DATE, dateValue));
+			}
+		case INLINE_STRING:
+		case SHARED_STRING:
+		case STRING:
+			// In case a date is stored as String, we try to parse it here
+			String dateString = dateValue;
+			try {
+				return dateFormatProvider.geDateFormat().parse(dateString);
+			} catch (java.text.ParseException e) {
+				throw new ParseException(new ParsingError(getCurrentRow() + 1, columnIndex,
+						ParsingError.ErrorCode.UNPARSEABLE_DATE, dateString));
+			}
+		default:
+			throw new ParseException(new ParsingError(getCurrentRow() + 1, columnIndex,
+					ParsingError.ErrorCode.UNPARSEABLE_DATE, dateValue));
 
 		}
 	}
@@ -351,18 +370,18 @@ public class XlsxResultSet implements DataResultSet {
 			return ValueType.EMPTY;
 		}
 		switch (cellType) {
-			case DATE:
-				return ValueType.DATE;
-			case ERROR:
-				return ValueType.EMPTY;
-			case NUMBER:
-				return ValueType.NUMBER;
-			case BOOLEAN:
-			case INLINE_STRING:
-			case SHARED_STRING:
-			case STRING:
-			default:
-				return ValueType.STRING;
+		case DATE:
+			return ValueType.DATE;
+		case ERROR:
+			return ValueType.EMPTY;
+		case NUMBER:
+			return ValueType.NUMBER;
+		case BOOLEAN:
+		case INLINE_STRING:
+		case SHARED_STRING:
+		case STRING:
+		default:
+			return ValueType.STRING;
 		}
 	}
 
@@ -404,7 +423,8 @@ public class XlsxResultSet implements DataResultSet {
 	/**
 	 * @param columnIndex
 	 *            the index of the cell in the current row
-	 * @return the {@link XlsxCellType} of the cell or <code>null</code> if the cell is empty
+	 * @return the {@link XlsxCellType} of the cell or <code>null</code> if the
+	 *         cell is empty
 	 */
 	private XlsxCellType getCellType(int columnIndex) {
 		XlsxCell xlsxCell = getXlsxCell(columnIndex);
@@ -424,28 +444,30 @@ public class XlsxResultSet implements DataResultSet {
 			return null;
 		}
 		switch (cellType) {
-			case NUMBER:
-				return decimalFormat.format(new BigDecimal(value));
-			case BOOLEAN:
-				if (Integer.parseInt(value) == 1) {
-					return BOOLEAN_TRUE;
-				} else {
-					return BOOLEAN_FALSE;
-				}
-			default:
-				return value;
+		case NUMBER:
+			return decimalFormat.format(new BigDecimal(value));
+		case BOOLEAN:
+			if (Integer.parseInt(value) == 1) {
+				return BOOLEAN_TRUE;
+			} else {
+				return BOOLEAN_FALSE;
+			}
+		default:
+			return value;
 		}
 	}
 
 	@Override
 	public int[] getValueTypes() {
-		// return an array full of zeros as we cannot determine the value types of each columns here
+		// return an array full of zeros as we cannot determine the value types
+		// of each columns here
 		return new int[getNumberOfColumns()];
 	}
 
 	/**
-	 * @return the number of all rows available by the specified worksheet (also includes empty rows
-	 *         at the end of the file) or -1 if number is unknown
+	 * @return the number of all rows available by the specified worksheet (also
+	 *         includes empty rows at the end of the file) or -1 if number is
+	 *         unknown
 	 */
 	public int getNumberOfRows() {
 		return sheetMetaData.getNumberOfRows();
@@ -454,7 +476,8 @@ public class XlsxResultSet implements DataResultSet {
 	/**
 	 * @param columnMetaDatas
 	 *            meta data defined by the operator
-	 * @return all names of columns that have been found empty after parsing the XLSX file
+	 * @return all names of columns that have been found empty after parsing the
+	 *         XLSX file
 	 */
 	public List<String> getEmptyColumnNames(ColumnMetaData[] columnMetaDatas) {
 		List<String> toRemove = new LinkedList<>();
@@ -466,7 +489,8 @@ public class XlsxResultSet implements DataResultSet {
 			return Collections.emptyList();
 		}
 
-		// We can safely assume that empty columns will always have their Excel column name
+		// We can safely assume that empty columns will always have their Excel
+		// column name
 		for (int i = 0; i < emptyColumns.length; i++) {
 			boolean empty = emptyColumns[i];
 			ColumnMetaData cmd = null;
@@ -546,9 +570,10 @@ public class XlsxResultSet implements DataResultSet {
 
 	/**
 	 * @param parameterAsBoolean
-	 *            defines whether the first row should be used as names. If set to <code>true</code>
-	 *            the worksheet parser will skip all beginning empty rows until the first row with
-	 *            content was found.
+	 *            defines whether the first row should be used as names. If set
+	 *            to <code>true</code> the worksheet parser will skip all
+	 *            beginning empty rows until the first row with content was
+	 *            found.
 	 */
 	public void setUseFirstRowAsNames(boolean isFirstRowAsNames) {
 		this.worksheetParser.setUseFirstRowAsNames(isFirstRowAsNames);

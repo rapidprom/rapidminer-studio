@@ -105,10 +105,10 @@ import com.rapidminer.tools.usagestats.UsageStatsTransmissionDialog;
 import com.vlsolutions.swing.docking.DockableContainerFactory;
 import com.vlsolutions.swing.docking.ui.DockingUISettings;
 
-
 /**
- * The main class if RapidMiner is started in GUI mode. This class keeps a reference to the
- * {@link MainFrame} and some other GUI relevant information and methods.
+ * The main class if RapidMiner is started in GUI mode. This class keeps a
+ * reference to the {@link MainFrame} and some other GUI relevant information
+ * and methods.
  *
  * @author Ingo Mierswa, Simon Fischer
  */
@@ -143,7 +143,10 @@ public class RapidMinerGUI extends RapidMiner {
 	public static final String PROPERTY_CLOSE_ALL_RESULTS_NOW = "rapidminer.gui.close_all_results_without_confirmation";
 	public static final String PROPERTY_FETCH_DATA_BASE_TABLES_NAMES = "rapidminer.gui.fetch_data_base_table_names";
 	public static final String PROPERTY_DISCONNECT_ON_DISABLE = "rapidminer.gui.disconnect_on_disable";
-	/** determines if a warning notification bubble is shown when no result ports are connected */
+	/**
+	 * determines if a warning notification bubble is shown when no result ports
+	 * are connected
+	 */
 	public static final String PROPERTY_SHOW_NO_RESULT_WARNING = "rapidminer.gui.no_result_port_connected";
 
 	public static final String PROPERTY_TRANSFER_USAGESTATS = "rapidminer.gui.transfer_usagestats";
@@ -171,7 +174,8 @@ public class RapidMinerGUI extends RapidMiner {
 		RapidMiner.registerParameter(new ParameterTypeBoolean(PROPERTY_RAPIDMINER_GUI_SNAP_TO_GRID, "", true));
 		RapidMiner.registerParameter(new ParameterTypeBoolean(PROPERTY_AUTOWIRE_INPUT, "", false));
 		RapidMiner.registerParameter(new ParameterTypeBoolean(PROPERTY_AUTOWIRE_OUTPUT, "", false));
-		RapidMiner.registerParameter(new ParameterTypeBoolean(PROPERTY_RESOLVE_RELATIVE_REPOSITORY_LOCATIONS, "", true));
+		RapidMiner
+				.registerParameter(new ParameterTypeBoolean(PROPERTY_RESOLVE_RELATIVE_REPOSITORY_LOCATIONS, "", true));
 		RapidMiner.registerParameter(new ParameterTypeCategory(PROPERTY_CLOSE_RESULTS_BEFORE_RUN, "",
 				DecisionRememberingConfirmDialog.PROPERTY_VALUES, DecisionRememberingConfirmDialog.TRUE));
 		RapidMiner.registerParameter(
@@ -191,35 +195,38 @@ public class RapidMinerGUI extends RapidMiner {
 
 		// GUI Parameters MainFrame
 
-		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_MATRIXPLOT_SIZE, "", 1,
-				Integer.MAX_VALUE, 200));
+		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_MATRIXPLOT_SIZE, "",
+				1, Integer.MAX_VALUE, 200));
 		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_ROWS_MAXIMUM, "", 1,
 				Integer.MAX_VALUE, PlotterPanel.DEFAULT_MAX_NUMBER_OF_DATA_POINTS));
-		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_DEFAULT_MAXIMUM, "", -1,
-				Integer.MAX_VALUE, 100000));
-		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_LEGEND_CLASSLIMIT, "",
-				-1, Integer.MAX_VALUE, 10));
-		RapidMiner.registerParameter(
-				new ParameterTypeColor(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_LEGEND_MINCOLOR, "", java.awt.Color.blue));
-		RapidMiner.registerParameter(
-				new ParameterTypeColor(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_LEGEND_MAXCOLOR, "", java.awt.Color.red));
-		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_COLORS_CLASSLIMIT, "",
-				-1, Integer.MAX_VALUE, 10));
+		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_DEFAULT_MAXIMUM, "",
+				-1, Integer.MAX_VALUE, 100000));
+		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_LEGEND_CLASSLIMIT,
+				"", -1, Integer.MAX_VALUE, 10));
+		RapidMiner.registerParameter(new ParameterTypeColor(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_LEGEND_MINCOLOR,
+				"", java.awt.Color.blue));
+		RapidMiner.registerParameter(new ParameterTypeColor(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_LEGEND_MAXCOLOR,
+				"", java.awt.Color.red));
+		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_PLOTTER_COLORS_CLASSLIMIT,
+				"", -1, Integer.MAX_VALUE, 10));
 		RapidMiner.registerParameter(
 				new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_UNDOLIST_SIZE, "", 1, Integer.MAX_VALUE, 100));
-		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_ATTRIBUTEEDITOR_ROWLIMIT, "", -1,
-				Integer.MAX_VALUE, 50));
-		RapidMiner.registerParameter(new ParameterTypeBoolean(MainFrame.PROPERTY_RAPIDMINER_GUI_BEEP_SUCCESS, "", false));
+		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_ATTRIBUTEEDITOR_ROWLIMIT,
+				"", -1, Integer.MAX_VALUE, 50));
+		RapidMiner
+				.registerParameter(new ParameterTypeBoolean(MainFrame.PROPERTY_RAPIDMINER_GUI_BEEP_SUCCESS, "", false));
 		RapidMiner.registerParameter(new ParameterTypeBoolean(MainFrame.PROPERTY_RAPIDMINER_GUI_BEEP_ERROR, "", false));
-		RapidMiner.registerParameter(new ParameterTypeBoolean(MainFrame.PROPERTY_RAPIDMINER_GUI_BEEP_BREAKPOINT, "", false));
-		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_MESSAGEVIEWER_ROWLIMIT, "", -1,
-				Integer.MAX_VALUE, LogViewer.DEFAULT_LOG_ENTRY_NUMBER));
+		RapidMiner.registerParameter(
+				new ParameterTypeBoolean(MainFrame.PROPERTY_RAPIDMINER_GUI_BEEP_BREAKPOINT, "", false));
+		RapidMiner.registerParameter(new ParameterTypeInt(MainFrame.PROPERTY_RAPIDMINER_GUI_MESSAGEVIEWER_ROWLIMIT, "",
+				-1, Integer.MAX_VALUE, LogViewer.DEFAULT_LOG_ENTRY_NUMBER));
 		RapidMiner.registerParameter(new ParameterTypeCategory(MainFrame.PROPERTY_RAPIDMINER_GUI_SAVE_BEFORE_RUN, "",
 				DecisionRememberingConfirmDialog.PROPERTY_VALUES, DecisionRememberingConfirmDialog.FALSE));
 		RapidMiner.registerParameter(
 				new ParameterTypeBoolean(MainFrame.PROPERTY_RAPIDMINER_GUI_SAVE_ON_PROCESS_CREATION, "", false));
-		RapidMiner.registerParameter(new ParameterTypeCategory(MainFrame.PROPERTY_RAPIDMINER_GUI_AUTO_SWITCH_TO_RESULTVIEW,
-				"", DecisionRememberingConfirmDialog.PROPERTY_VALUES, DecisionRememberingConfirmDialog.TRUE));
+		RapidMiner.registerParameter(
+				new ParameterTypeCategory(MainFrame.PROPERTY_RAPIDMINER_GUI_AUTO_SWITCH_TO_RESULTVIEW, "",
+						DecisionRememberingConfirmDialog.PROPERTY_VALUES, DecisionRememberingConfirmDialog.TRUE));
 		RapidMiner.registerParameter(new ParameterTypeCategory(MainFrame.PROPERTY_RAPIDMINER_GUI_LOG_LEVEL, "",
 				LogViewer.SELECTABLE_LEVEL_NAMES, LogViewer.DEFAULT_LEVEL_INDEX));
 
@@ -231,11 +238,13 @@ public class RapidMinerGUI extends RapidMiner {
 		// ---------- Load bundled fonts----------- -----------------
 		try {
 			GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-			ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, Tools.getResourceInputStream("fonts/OpenSans-Light.ttf")));
+			ge.registerFont(
+					Font.createFont(Font.TRUETYPE_FONT, Tools.getResourceInputStream("fonts/OpenSans-Light.ttf")));
 			ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, Tools.getResourceInputStream("fonts/OpenSans.ttf")));
 			ge.registerFont(
 					Font.createFont(Font.TRUETYPE_FONT, Tools.getResourceInputStream("fonts/OpenSans-Semibold.ttf")));
-			ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, Tools.getResourceInputStream("fonts/OpenSans-Bold.ttf")));
+			ge.registerFont(
+					Font.createFont(Font.TRUETYPE_FONT, Tools.getResourceInputStream("fonts/OpenSans-Bold.ttf")));
 			ge.registerFont(
 					Font.createFont(Font.TRUETYPE_FONT, Tools.getResourceInputStream("fonts/OpenSans-ExtraBold.ttf")));
 		} catch (Exception e) {
@@ -260,8 +269,8 @@ public class RapidMinerGUI extends RapidMiner {
 	private static AutoSave autosave = new AutoSave();
 
 	/**
-	 * This thread listens for System shutdown and cleans up after shutdown. This included saving
-	 * the recent file list and other GUI properties.
+	 * This thread listens for System shutdown and cleans up after shutdown.
+	 * This included saving the recent file list and other GUI properties.
 	 */
 	private static class ShutdownHook extends Thread {
 
@@ -276,7 +285,8 @@ public class RapidMinerGUI extends RapidMiner {
 		}
 	}
 
-	// private static UpdateManager updateManager = new CommunityUpdateManager();
+	// private static UpdateManager updateManager = new
+	// CommunityUpdateManager();
 
 	public synchronized void run(final String openLocation) throws Exception {
 		startupStarted = true;
@@ -369,8 +379,10 @@ public class RapidMinerGUI extends RapidMiner {
 		RapidMiner.splashMessage("plugin_gui");
 		Plugin.initPluginGuis(mainFrame);
 
-		// only load the perspective here after all plugins have registered their dockables
-		// otherwise you may end up breaking the perspective and VLDocking exists in invalid states
+		// only load the perspective here after all plugins have registered
+		// their dockables
+		// otherwise you may end up breaking the perspective and VLDocking
+		// exists in invalid states
 		// and explodes into the smoking piece of crap it is
 		mainFrame.getPerspectiveController().showPerspective(PerspectiveModel.DESIGN);
 
@@ -442,7 +454,8 @@ public class RapidMinerGUI extends RapidMiner {
 		// register data source factories
 		DataSourceFactoryRegistry.INSTANCE.register(new LocalFileDataSourceFactory());
 
-		// Register file data source factories: binary data source factory is registered first,
+		// Register file data source factories: binary data source factory is
+		// registered first,
 		// since it is the first choice for unknown formats.
 		DataSourceFactoryRegistry.INSTANCE.register(new BinaryDataSourceFactory());
 		DataSourceFactoryRegistry.INSTANCE.register(new ExcelDataSourceFactory());
@@ -453,16 +466,17 @@ public class RapidMinerGUI extends RapidMiner {
 		// setup tool tip text manager
 		ToolTipManager manager = ToolTipManager.sharedInstance();
 		manager.setDismissDelay(25000); // original: 4000
-		manager.setInitialDelay(1500);   // original: 750
-		manager.setReshowDelay(50);    // original: 500
+		manager.setInitialDelay(1500); // original: 750
+		manager.setReshowDelay(50); // original: 500
 	}
 
 	/**
-	 * This default implementation only setup the tool tip durations. Subclasses might override this
-	 * method.
+	 * This default implementation only setup the tool tip durations. Subclasses
+	 * might override this method.
 	 */
 	protected void setupGUI() throws NoOpUserError {
-		System.setProperty(BookmarkIO.PROPERTY_BOOKMARKS_DIR, FileSystemService.getUserRapidMinerDir().getAbsolutePath());
+		System.setProperty(BookmarkIO.PROPERTY_BOOKMARKS_DIR,
+				FileSystemService.getUserRapidMinerDir().getAbsolutePath());
 		System.setProperty(BookmarkIO.PROPERTY_BOOKMARKS_FILE, ".bookmarks");
 
 		try {
@@ -495,12 +509,13 @@ public class RapidMinerGUI extends RapidMiner {
 	}
 
 	/**
-	 * Checks whether the repository location belongs to the currently loaded process.
+	 * Checks whether the repository location belongs to the currently loaded
+	 * process.
 	 *
 	 * @param location
 	 *            Repository location to check.
-	 * @return true if the process belonging to this entry is currently presented on the GUI, false
-	 *         otherwise.
+	 * @return true if the process belonging to this entry is currently
+	 *         presented on the GUI, false otherwise.
 	 */
 	public static boolean isMainFrameProcessLocation(RepositoryLocation location) {
 		if (getMainFrame() != null && getMainFrame().getProcess() != null) {
@@ -513,8 +528,9 @@ public class RapidMinerGUI extends RapidMiner {
 	}
 
 	/**
-	 * Resets the location of the MainFrame process without reloading it. Use only if the currently
-	 * displayed process is stored in repository, and got renamed or moved.
+	 * Resets the location of the MainFrame process without reloading it. Use
+	 * only if the currently displayed process is stored in repository, and got
+	 * renamed or moved.
 	 *
 	 * @param repositoryLocation
 	 *            The new process location.
@@ -581,7 +597,8 @@ public class RapidMinerGUI extends RapidMiner {
 					try {
 						recentFiles.add(new RepositoryProcessLocation(new RepositoryLocation(line.substring(11))));
 					} catch (MalformedRepositoryLocationException e) {
-						LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.unparseable_line", line);
+						LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.unparseable_line",
+								line);
 					}
 				} else {
 					LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.unparseable_line", line);
@@ -628,7 +645,8 @@ public class RapidMinerGUI extends RapidMiner {
 			properties.setProperty(PROPERTY_GEOMETRY_WIDTH, "" + mainFrame.getWidth());
 			properties.setProperty(PROPERTY_GEOMETRY_HEIGHT, "" + mainFrame.getHeight());
 			properties.setProperty(PROPERTY_GEOMETRY_EXTENDED_STATE, "" + mainFrame.getExtendedState());
-			properties.setProperty(PROPERTY_SHOW_PARAMETER_HELP, "" + mainFrame.getPropertyPanel().isShowParameterHelp());
+			properties.setProperty(PROPERTY_SHOW_PARAMETER_HELP,
+					"" + mainFrame.getPropertyPanel().isShowParameterHelp());
 			properties.setProperty(PROPERTY_EXPERT_MODE, "" + mainFrame.getPropertyPanel().isExpertMode());
 			File file = FileSystemService.getUserConfigFile("gui.properties");
 			OutputStream out = null;
@@ -686,7 +704,8 @@ public class RapidMinerGUI extends RapidMiner {
 				mainFrame.getPropertyPanel()
 						.setExpertMode(Boolean.valueOf(properties.getProperty(PROPERTY_EXPERT_MODE)).booleanValue());
 
-				// If the property is not set we want the parameter help to be shown
+				// If the property is not set we want the parameter help to be
+				// shown
 				String showHelpProperty = properties.getProperty(PROPERTY_SHOW_PARAMETER_HELP);
 				if (showHelpProperty == null || showHelpProperty.isEmpty()) {
 					mainFrame.getPropertyPanel().setShowParameterHelp(true);
@@ -703,8 +722,9 @@ public class RapidMinerGUI extends RapidMiner {
 	}
 
 	/**
-	 * This method sets some default GUI properties. This method can be invoked if the properties
-	 * file was not found or produced any error messages (which might happen after version changes).
+	 * This method sets some default GUI properties. This method can be invoked
+	 * if the properties file was not found or produced any error messages
+	 * (which might happen after version changes).
 	 */
 	private static void setDefaultGUIProperties() {
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -714,8 +734,9 @@ public class RapidMinerGUI extends RapidMiner {
 	}
 
 	public static void main(String[] args) throws Exception {
-		Policy.setPolicy(new PluginSandboxPolicy());
-		System.setSecurityManager(new PluginSecurityManager());
+		// svzelst@20160812 disable security policy for plugin development.
+		// Policy.setPolicy(new PluginSandboxPolicy());
+		// System.setSecurityManager(new PluginSecurityManager());
 
 		RapidMiner.addShutdownHook(new ShutdownHook());
 		setExecutionMode(
@@ -741,7 +762,8 @@ public class RapidMinerGUI extends RapidMiner {
 				return true;
 			}
 		})) {
-			// always start if there are no args so user can start new Studio instances at will
+			// always start if there are no args so user can start new Studio
+			// instances at will
 			shouldLaunch = args.length == 0;
 		}
 
@@ -809,11 +831,13 @@ public class RapidMinerGUI extends RapidMiner {
 	}
 
 	/**
-	 * Called with rapidminer:// URLs passed as command line arguments. Currently the only supported
-	 * pattern is rapidminer://extension/{extensionkey} to install an extension with the given name.
+	 * Called with rapidminer:// URLs passed as command line arguments.
+	 * Currently the only supported pattern is
+	 * rapidminer://extension/{extensionkey} to install an extension with the
+	 * given name.
 	 *
-	 * This method just logs a warning method if it cannot handle the rapidminer:// URL for
-	 * syntactical reasons.
+	 * This method just logs a warning method if it cannot handle the
+	 * rapidminer:// URL for syntactical reasons.
 	 *
 	 * @throws IllegalArgumentException
 	 *             if this is not a rapidminer:// url
@@ -844,20 +868,20 @@ public class RapidMinerGUI extends RapidMiner {
 			return;
 		}
 		switch (components[0]) {
-			case "extension":
-				String extensionKey = components[1];
-				// asynchronous
-				try {
-					UpdateManagerRegistry.INSTANCE.get().showUpdateDialog(false, extensionKey);
-				} catch (URISyntaxException | IOException e) {
-					LogService.getRoot().log(Level.WARNING,
-							"com.rapidminer.gui.RapidMinerGUI.error_connecting_to_updateserver", e);
-				}
-				break;
-			default:
-				LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.unknown_rapidminer_url",
-						new Object[] { urlStr });
-				return;
+		case "extension":
+			String extensionKey = components[1];
+			// asynchronous
+			try {
+				UpdateManagerRegistry.INSTANCE.get().showUpdateDialog(false, extensionKey);
+			} catch (URISyntaxException | IOException e) {
+				LogService.getRoot().log(Level.WARNING,
+						"com.rapidminer.gui.RapidMinerGUI.error_connecting_to_updateserver", e);
+			}
+			break;
+		default:
+			LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.unknown_rapidminer_url",
+					new Object[] { urlStr });
+			return;
 		}
 	}
 

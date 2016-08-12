@@ -85,16 +85,18 @@ import com.rapidminer.tools.PlatformUtilities;
 import com.vlsolutions.swing.docking.DockKey;
 import com.vlsolutions.swing.docking.Dockable;
 
-
 /**
- * This panel displays parameters of an operator. It refreshes in either of these cases:
+ * This panel displays parameters of an operator. It refreshes in either of
+ * these cases:
  * <ul>
  * <li>A new operator is selected.</li>
- * <li>The {@link Parameters} of the current operator (which are observed) change in a way such that
- * the parameter value differs from the one displayed by the editor. This should only happen if a
- * parameter value is changed programmatically, e.g. by an operator.</li>
- * <li>{@link #processUpdated(Process)} is called and {@link #getProperties()} returns a different
- * list than the one returned during the last {@link #setupComponents()}.</li>
+ * <li>The {@link Parameters} of the current operator (which are observed)
+ * change in a way such that the parameter value differs from the one displayed
+ * by the editor. This should only happen if a parameter value is changed
+ * programmatically, e.g. by an operator.</li>
+ * <li>{@link #processUpdated(Process)} is called and {@link #getProperties()}
+ * returns a different list than the one returned during the last
+ * {@link #setupComponents()}.</li>
  * <li>When changing to expert mode.</li>
  * </ul>
  *
@@ -110,7 +112,8 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 	private static final String ATTRIBUTE_PARAMETER_KEY = "key";
 
 	/**
-	 * {@link ExecutorService} used to execute XLST transformations of parameter help text.
+	 * {@link ExecutorService} used to execute XLST transformations of parameter
+	 * help text.
 	 */
 	private static final ExecutorService PARAMETER_UPDATE_SERVICE = Executors.newCachedThreadPool();
 
@@ -120,7 +123,7 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 	private static final Border TOP_BORDER = BorderFactory.createMatteBorder(1, 0, 0, 0, Colors.PANEL_SEPARATOR);
 	private static final Border BOTH_BORDERS = BorderFactory.createMatteBorder(1, 0, 1, 0, Colors.PANEL_SEPARATOR);
 
-	private static final XMLInputFactory XML_STREAM_FACTORY = XMLInputFactory.newFactory();
+	private static final XMLInputFactory XML_STREAM_FACTORY = XMLInputFactory.newInstance();
 
 	public static final String PROPERTY_EDITOR_DOCK_KEY = "property_editor";
 
@@ -161,8 +164,8 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 				ParameterType type = operator.getParameters().getParameterType(key);
 				String editorValue = type.toString(editor.getCellEditorValue());
 				String opValue = operator.getParameters().getParameterOrNull(key);
-				if (opValue != null && editorValue == null || opValue == null && editorValue != null || opValue != null
-						&& editorValue != null && !opValue.equals(editorValue)) {
+				if (opValue != null && editorValue == null || opValue == null && editorValue != null
+						|| opValue != null && editorValue != null && !opValue.equals(editorValue)) {
 					editor.getTableCellEditorComponent(null, opValue, false, 0, 1);
 				}
 			} else {
@@ -235,7 +238,8 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 	}
 
 	@Override
-	public void processChanged(Process process) {}
+	public void processChanged(Process process) {
+	}
 
 	@Override
 	public void processUpdated(Process process) {
@@ -290,7 +294,8 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 				changeCompatibility.setVisible(false);
 			} else {
 				((CompatibilityLevelSpinnerModel) compatibilityLevelSpinner.getModel()).setOperator(operator);
-				changeCompatibility.setAction(createCompatibilityAction(operator.getCompatibilityLevel().getLongVersion()));
+				changeCompatibility
+						.setAction(createCompatibilityAction(operator.getCompatibilityLevel().getLongVersion()));
 				changeCompatibility.setVisible(true);
 			}
 			compatibilityLabel.setVisible(false);
@@ -336,8 +341,8 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 			advancedPanel.add(showAdvancedParameters);
 			advancedPanel.add(hideAdvancedParameters);
 			compatibilityLabel.setLabelFor(compatibilityLevelSpinner);
-			compatibilityLevelSpinner.setPreferredSize(new Dimension(80, (int) compatibilityLevelSpinner.getPreferredSize()
-					.getHeight()));
+			compatibilityLevelSpinner.setPreferredSize(
+					new Dimension(80, (int) compatibilityLevelSpinner.getPreferredSize().getHeight()));
 
 			compatibilityPanel.add(compatibilityLabel);
 			compatibilityPanel.add(compatibilityLevelSpinner);
@@ -424,13 +429,14 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 		if (hidden > 0) {
 			hideAdvancedParameters.setVisible(false);
 			showAdvancedParameters.setVisible(true);
-			showAdvancedParameters.setToolTipText(I18N.getGUIMessage("gui.action.parameters.show_advanced.tip", hidden));
+			showAdvancedParameters
+					.setToolTipText(I18N.getGUIMessage("gui.action.parameters.show_advanced.tip", hidden));
 		} else {
 			showAdvancedParameters.setVisible(false);
 			if (advancedCount > 0) {
 				hideAdvancedParameters.setVisible(true);
-				hideAdvancedParameters.setToolTipText(I18N.getGUIMessage("gui.action.parameters.hide_advanced.tip",
-						advancedCount));
+				hideAdvancedParameters
+						.setToolTipText(I18N.getGUIMessage("gui.action.parameters.hide_advanced.tip", advancedCount));
 			} else {
 				hideAdvancedParameters.setVisible(false);
 			}
@@ -439,9 +445,9 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 	}
 
 	/**
-	 * Starts a progress thread which parses the parameter descriptions for the provided operator ,
-	 * cleans the {@link #parameterDescriptionCache}, and stores parsed descriptions in the
-	 * {@link #parameterDescriptionCache}.
+	 * Starts a progress thread which parses the parameter descriptions for the
+	 * provided operator , cleans the {@link #parameterDescriptionCache}, and
+	 * stores parsed descriptions in the {@link #parameterDescriptionCache}.
 	 */
 	private void parseParameterDescriptions(final Operator operator) {
 		parameterDescriptionCache.clear();
@@ -456,69 +462,71 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 				boolean inParameters = false;
 				while (reader.hasNext()) {
 					switch (reader.next()) {
-						case XMLStreamReader.START_ELEMENT:
-							if (!inParameters && reader.getLocalName().equals(TAG_PARAMETERS)) {
-								inParameters = true;
-							} else {
-								AttributesImpl attributes = new AttributesImpl();
-								for (int i = 0; i < reader.getAttributeCount(); i++) {
-									attributes.addAttribute("", reader.getAttributeLocalName(i), reader.getAttributeName(i)
-											.toString(), reader.getAttributeType(i), reader.getAttributeValue(i));
-								}
-
-								// Check if no parameter was found
-								if (reader.getLocalName().equals(TAG_PARAMETER)) {
-									parameterKey = attributes.getValue(ATTRIBUTE_PARAMETER_KEY);
-
-									// In case a parameter key was found, create a new string
-									// builder
-									if (parameterKey != null) {
-										parameterTextBuilder = new StringBuilder();
-									}
-								}
-
-								if (parameterTextBuilder != null) {
-									appendParameterStartTag(reader.getLocalName(), attributes, parameterTextBuilder);
-								}
+					case XMLStreamReader.START_ELEMENT:
+						if (!inParameters && reader.getLocalName().equals(TAG_PARAMETERS)) {
+							inParameters = true;
+						} else {
+							AttributesImpl attributes = new AttributesImpl();
+							for (int i = 0; i < reader.getAttributeCount(); i++) {
+								attributes.addAttribute("", reader.getAttributeLocalName(i),
+										reader.getAttributeName(i).toString(), reader.getAttributeType(i),
+										reader.getAttributeValue(i));
 							}
-							break;
-						case XMLStreamReader.END_ELEMENT:
-							// end parsing when end of parameters element is reached
-							if (reader.getLocalName().equals(TAG_PARAMETERS)) {
-								return;
+
+							// Check if no parameter was found
+							if (reader.getLocalName().equals(TAG_PARAMETER)) {
+								parameterKey = attributes.getValue(ATTRIBUTE_PARAMETER_KEY);
+
+								// In case a parameter key was found, create a
+								// new string
+								// builder
+								if (parameterKey != null) {
+									parameterTextBuilder = new StringBuilder();
+								}
 							}
 
 							if (parameterTextBuilder != null) {
+								appendParameterStartTag(reader.getLocalName(), attributes, parameterTextBuilder);
+							}
+						}
+						break;
+					case XMLStreamReader.END_ELEMENT:
+						// end parsing when end of parameters element is reached
+						if (reader.getLocalName().equals(TAG_PARAMETERS)) {
+							return;
+						}
 
-								// otherwise add element to description text
-								parameterTextBuilder.append("</");
-								parameterTextBuilder.append(reader.getLocalName());
-								parameterTextBuilder.append(">");
+						if (parameterTextBuilder != null) {
 
-								// Store description when parameter element ends
-								if (reader.getLocalName().equals(TAG_PARAMETER)) {
-									final String parameterDescription = parameterTextBuilder.toString();
-									final String key = parameterKey;
-									if (!parameterDescriptionCache.containsKey(parameterKey)) {
-										Source xmlSource = new StreamSource(new StringReader(parameterDescription));
-										try {
-											String desc = OperatorDocToHtmlConverter.applyXSLTTransformation(xmlSource);
-											parameterDescriptionCache.put(key, StringEscapeUtils.unescapeHtml(desc));
-										} catch (TransformerException e) {
-											// ignore
-										}
+							// otherwise add element to description text
+							parameterTextBuilder.append("</");
+							parameterTextBuilder.append(reader.getLocalName());
+							parameterTextBuilder.append(">");
+
+							// Store description when parameter element ends
+							if (reader.getLocalName().equals(TAG_PARAMETER)) {
+								final String parameterDescription = parameterTextBuilder.toString();
+								final String key = parameterKey;
+								if (!parameterDescriptionCache.containsKey(parameterKey)) {
+									Source xmlSource = new StreamSource(new StringReader(parameterDescription));
+									try {
+										String desc = OperatorDocToHtmlConverter.applyXSLTTransformation(xmlSource);
+										parameterDescriptionCache.put(key, StringEscapeUtils.unescapeHtml(desc));
+									} catch (TransformerException e) {
+										// ignore
 									}
 								}
 							}
-							break;
-						case XMLStreamReader.CHARACTERS:
-							if (parameterTextBuilder != null) {
-								parameterTextBuilder.append(StringEscapeUtils.escapeHtml(reader.getText()));
-							}
-							break;
-						default:
-							// ignore other events
-							break;
+						}
+						break;
+					case XMLStreamReader.CHARACTERS:
+						if (parameterTextBuilder != null) {
+							parameterTextBuilder.append(StringEscapeUtils.escapeHtml(reader.getText()));
+						}
+						break;
+					default:
+						// ignore other events
+						break;
 					}
 				}
 			} catch (IOException | XMLStreamException e) {
