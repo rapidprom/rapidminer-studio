@@ -1,14 +1,31 @@
 /**
- * Copyright (C) 2001-2016 RapidMiner GmbH
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ *
+ * Complete list of developers available at our web site:
+ *
+ * http://rapidminer.com
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Affero General Public License as published by the Free Software Foundation, either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License along with this program.
+ * If not, see http://www.gnu.org/licenses/.
  */
 package com.rapidminer.security;
 
 import java.awt.AWTPermission;
 import java.io.FilePermission;
+import java.lang.reflect.ReflectPermission;
 import java.net.SocketPermission;
 import java.net.URLPermission;
 import java.security.AccessController;
 import java.security.AllPermission;
+import java.security.CodeSource;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PermissionCollection;
@@ -27,9 +44,12 @@ import javax.sound.sampled.AudioPermission;
 import javax.xml.bind.DatatypeConverter;
 
 import com.rapidminer.RapidMiner;
+import com.rapidminer.core.license.ProductConstraintManager;
+import com.rapidminer.license.StudioLicenseConstants;
 import com.rapidminer.operator.ScriptingOperator;
 import com.rapidminer.security.internal.InternalPluginClassLoader;
 import com.rapidminer.tools.LogService;
+import com.rapidminer.tools.ParameterService;
 import com.rapidminer.tools.plugin.Plugin;
 import com.rapidminer.tools.plugin.PluginClassLoader;
 
@@ -99,6 +119,21 @@ public final class PluginSandboxPolicy extends Policy {
 		} else {
 			return createAllPermissions();
 		}
+	}
+
+	@Override
+	public PermissionCollection getPermissions(CodeSource codesource) {
+		// This is a workaround for the following bug
+		// https://bugs.openjdk.java.net/browse/JDK-8014008
+		// return modifiable empty permissions, to avoid manipulation of read only permissions
+		for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+			if ("sun.rmi.server.LoaderHandler".equals(element.getClassName())
+					&& ("loadClass".equals(element.getMethodName()) || "loadProxyClass".equals(element.getMethodName()))) {
+				return new Permissions();
+			}
+		}
+		// return unmodifiable Policy.UNSUPPORTED_EMPTY_COLLECTION
+		return super.getPermissions(codesource);
 	}
 
 	/**
@@ -206,6 +241,33 @@ public final class PluginSandboxPolicy extends Policy {
 	private static PermissionCollection createUnsignedPermissions(final PluginClassLoader loader) {
 		final Permissions permissions = new Permissions();
 
+		if (ProductConstraintManager.INSTANCE.isInitialized()) {
+			boolean isAllowed = ProductConstraintManager.INSTANCE.getActiveLicense()
+					.getPrecedence() >= StudioLicenseConstants.UNLIMITED_LICENSE_PRECEDENCE
+					|| ProductConstraintManager.INSTANCE.isTrialLicense();
+			boolean isEnabled = Boolean.parseBoolean(
+					ParameterService.getParameterValue(RapidMiner.PROPERTY_RAPIDMINER_UPDATE_ADDITIONAL_PERMISSIONS));
+			if (isAllowed && isEnabled) {
+				permissions.add(new ReflectPermission("suppressAccessChecks"));
+				permissions.add(new ReflectPermission("newProxyInPackage.*"));
+				permissions.add(new AWTPermission("accessClipboard"));
+				permissions.add(new RuntimePermission("createClassLoader"));
+				permissions.add(new RuntimePermission("getClassLoader"));
+				permissions.add(new RuntimePermission("setContextClassLoader"));
+				permissions.add(new RuntimePermission("enableContextClassLoaderOverride"));
+				permissions.add(new RuntimePermission("closeClassLoader"));
+				permissions.add(new RuntimePermission("modifyThread"));
+				permissions.add(new RuntimePermission("stopThread"));
+				permissions.add(new RuntimePermission("modifyThreadGroup"));
+				permissions.add(new RuntimePermission("loadLibrary.*"));
+				permissions.add(new RuntimePermission("getStackTrace"));
+				permissions.add(new RuntimePermission("setDefaultUncaughtExceptionHandler"));
+				permissions.add(new RuntimePermission("preferences"));
+				permissions.add(new RuntimePermission("setFactory"));
+				permissions.add(new PropertyPermission("*", "write"));
+			}
+		}
+
 		permissions.add(new RuntimePermission("shutdownHooks"));
 
 		permissions.add(new PropertyPermission("*", "read"));
@@ -264,6 +326,14 @@ public final class PluginSandboxPolicy extends Policy {
 	 * @return the permissions, never {@code null}
 	 */
 	private static PermissionCollection createGroovySourcePermissions() {
+		if (ProductConstraintManager.INSTANCE.isInitialized()) {
+			if (ProductConstraintManager.INSTANCE.getActiveLicense()
+					.getPrecedence() >= StudioLicenseConstants.UNLIMITED_LICENSE_PRECEDENCE
+					|| ProductConstraintManager.INSTANCE.isTrialLicense()) {
+				return createAllPermissions();
+			}
+		}
+
 		Permissions permissions = new Permissions();
 
 		// grant some permissions because the script is something the user himself created

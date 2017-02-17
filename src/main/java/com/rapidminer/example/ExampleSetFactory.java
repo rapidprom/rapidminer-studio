@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.example;
 
 import java.util.ArrayList;
@@ -23,34 +23,32 @@ import java.util.Date;
 import java.util.List;
 
 import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DataRow;
-import com.rapidminer.example.table.DoubleArrayDataRow;
 import com.rapidminer.example.table.ExampleTable;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.tools.Ontology;
 
 
 /**
  * <p>
- * This class can be used to easily create @link ExampleSet}s and the underlying
+ * This class can be used to easily create @link {ExampleSet}s and the underlying
  * {@link ExampleTable} with simple method calls. Please note that it is often better to explicitly
- * fill the data table yourself, or, if possible, to extend {@link ExampleTable} or {@link DataRow}
- * to provide the necessary data to RapidMiner. For memory usage reasons, it is also often not
- * recommended to create the data matrix from your existing data in an extra step and then use one
- * of the factory methods. In these cases, it is better to directly fill an {@link ExampleTable}
- * from your data source.
+ * fill the data table yourself using an {@link ExampleSetBuilder} provided by {@link ExampleSets}.
+ * For memory usage reasons, it is also often not recommended to create the data matrix from your
+ * existing data in an extra step and then use one of the factory methods. In these cases, it is
+ * better to directly fill an {@link ExampleSetBuilder} from your data source.
  * </p>
  *
  * <p>
  * However, in some cases it might be more convenient to use this class in order to create example
  * sets from data matrices in a fast and simple way. The resulting example set will be backed up by
- * a {@link MemoryExampleTable}. If the data set at hand is completely numerical, one can simply use
- * one of the double matrix methods provided by this class. This will lead to an {@link ExampleSet}
- * containing only numerical attributes. Otherwise, one have to use the Object matrix methods.
- * Please note that only String objects and Number objects (Double, Integer) are allowed in this
- * case. Otherwise an Exception will be thrown. In case of the Object matrix methods the method
- * tries to identify the type itself and initialized the example set with the correct attribute
- * types (nominal or numerical).
+ * a {@link ExampleTable} created by a {@link ExampleSetBuilder}. If the data set at hand is
+ * completely numerical, one can simply use one of the double matrix methods provided by this class.
+ * This will lead to an {@link ExampleSet} containing only numerical attributes. Otherwise, one have
+ * to use the Object matrix methods. Please note that only String objects and Number objects
+ * (Double, Integer) are allowed in this case. Otherwise an Exception will be thrown. In case of the
+ * Object matrix methods the method tries to identify the type itself and initialized the example
+ * set with the correct attribute types (nominal or numerical).
  * </p>
  *
  * <p>
@@ -124,8 +122,8 @@ public class ExampleSetFactory {
 			attributeList.add(labelAttribute);
 		}
 
-		// create table
-		MemoryExampleTable table = new MemoryExampleTable(attributeList);
+		// create example set
+		ExampleSetBuilder builder = ExampleSets.from(attributeList).withExpectedSize(data.length);
 		for (int e = 0; e < data.length; e++) {
 			double[] dataRow = data[e];
 			if (labelAttribute != null) {
@@ -133,10 +131,13 @@ public class ExampleSetFactory {
 				System.arraycopy(data[e], 0, dataRow, 0, data[e].length);
 				dataRow[dataRow.length - 1] = labels[e];
 			}
-			table.addDataRow(new DoubleArrayDataRow(dataRow));
+			builder.addRow(dataRow);
+		}
+		if (labelAttribute != null) {
+			builder.withRole(labelAttribute, Attributes.LABEL_NAME);
 		}
 
-		return table.createExampleSet(labelAttribute);
+		return builder.build();
 	}
 
 	/**
@@ -226,8 +227,8 @@ public class ExampleSetFactory {
 			attributeList.add(labelAttribute);
 		}
 
-		// create table
-		MemoryExampleTable table = new MemoryExampleTable(attributeList);
+		// create example set
+		ExampleSetBuilder builder = ExampleSets.from(attributeList).withExpectedSize(data.length);
 		for (int e = 0; e < data.length; e++) {
 			double[] dataRow = new double[totalNumber];
 			for (int a = 0; a < numberOfAttributes; a++) {
@@ -285,10 +286,14 @@ public class ExampleSetFactory {
 							"ExampleSetFactory.createExampleSet(Object[][], Object[]): only objects of type String or Number (Double, Integer) are allowed for the object data matrix.");
 				}
 			}
-			table.addDataRow(new DoubleArrayDataRow(dataRow));
+			builder.addRow(dataRow);
 		}
 
-		return table.createExampleSet(labelAttribute);
+		if (labelAttribute != null) {
+			builder.withRole(labelAttribute, Attributes.LABEL_NAME);
+		}
+
+		return builder.build();
 	}
 
 	/**

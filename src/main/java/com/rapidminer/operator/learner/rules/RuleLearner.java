@@ -1,22 +1,25 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.rules;
+
+import java.util.LinkedList;
+import java.util.List;
 
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.Example;
@@ -41,9 +44,6 @@ import com.rapidminer.parameter.UndefinedParameterError;
 import com.rapidminer.tools.RandomGenerator;
 import com.rapidminer.tools.Tools;
 
-import java.util.LinkedList;
-import java.util.List;
-
 
 /**
  * <p>
@@ -52,18 +52,18 @@ import java.util.List;
  * algorithm iteratively grows and prunes rules until there are no positive examples left or the
  * error rate is greater than 50%.
  * </p>
- * 
+ *
  * <p>
  * In the growing phase, for each rule greedily conditions are added to the rule until the rule is
  * perfect (i.e. 100% accurate). The procedure tries every possible value of each attribute and
  * selects the condition with highest information gain.
  * </p>
- * 
+ *
  * <p>
  * In the prune phase, for each rule any final sequences of the antecedents is pruned with the
  * pruning metric p/(p+n).
  * </p>
- * 
+ *
  * @author Sebastian Land, Ingo Mierswa
  */
 public class RuleLearner extends AbstractLearner {
@@ -74,7 +74,7 @@ public class RuleLearner extends AbstractLearner {
 
 	public static final String[] CRITERIA_NAMES = { "information_gain", "accuracy" };
 
-	public static final Class[] CRITERIA_CLASSES = { InfoGainCriterion.class, AccuracyCriterion.class };
+	public static final Class<?>[] CRITERIA_CLASSES = { InfoGainCriterion.class, AccuracyCriterion.class };
 
 	public static final int CRITERION_INFO_GAIN = 0;
 
@@ -95,6 +95,8 @@ public class RuleLearner extends AbstractLearner {
 		double pureness = getParameterAsDouble(SimpleRuleLearner.PARAMETER_PURENESS);
 		double sampleRatio = getParameterAsDouble(PARAMETER_SAMPLE_RATIO);
 		double minimalPruneBenefit = getParameterAsDouble(PARAMETER_MINIMAL_PRUNE_BENEFIT);
+		boolean useLocalRandomSeed = getParameterAsBoolean(RandomGenerator.PARAMETER_USE_LOCAL_RANDOM_SEED);
+		int localRandomSeed = getParameterAsInt(RandomGenerator.PARAMETER_LOCAL_RANDOM_SEED);
 
 		Attribute label = exampleSet.getAttributes().getLabel();
 		RuleModel ruleModel = new RuleModel(exampleSet);
@@ -108,20 +110,18 @@ public class RuleLearner extends AbstractLearner {
 			ExampleSet oldTrainingSet = (ExampleSet) trainingSet.clone();
 
 			SplittedExampleSet growPruneSet = new SplittedExampleSet(trainingSet, sampleRatio,
-					SplittedExampleSet.STRATIFIED_SAMPLING,
-					getParameterAsBoolean(RandomGenerator.PARAMETER_USE_LOCAL_RANDOM_SEED),
-					getParameterAsInt(RandomGenerator.PARAMETER_LOCAL_RANDOM_SEED));
+					SplittedExampleSet.STRATIFIED_SAMPLING, useLocalRandomSeed, true, localRandomSeed);
 
 			// growing
-			SplittedExampleSet growingSet = (SplittedExampleSet) growPruneSet.clone();
+			SplittedExampleSet growingSet = new SplittedExampleSet(growPruneSet);
 			growingSet.selectSingleSubset(0);
-			SplittedExampleSet pruneSet = (SplittedExampleSet) growPruneSet.clone();
+			SplittedExampleSet pruneSet = growPruneSet;
 			pruneSet.selectSingleSubset(1);
 
 			int growOldSize = -1;
-			ExampleSet growSet = growingSet.clone();
-			while ((growSet.size() > 0) && (growSet.size() != growOldSize) && (!rule.isPure(growSet, pureness))
-					&& (growSet.getAttributes().size() > 0)) {
+			ExampleSet growSet = growingSet;
+			while (growSet.size() > 0 && growSet.size() != growOldSize && !rule.isPure(growSet, pureness)
+					&& growSet.getAttributes().size() > 0) {
 				SplitCondition term = termDetermination.getBestTerm(growSet, labelName);
 				if (term == null) {
 					break;
@@ -239,14 +239,14 @@ public class RuleLearner extends AbstractLearner {
 
 	private Criterion createCriterion() throws UndefinedParameterError {
 		String criterionName = getParameterAsString(AbstractTreeLearner.PARAMETER_CRITERION);
-		Class criterionClass = null;
+		Class<?> criterionClass = null;
 		for (int i = 0; i < CRITERIA_NAMES.length; i++) {
 			if (CRITERIA_NAMES[i].equals(criterionName)) {
 				criterionClass = CRITERIA_CLASSES[i];
 			}
 		}
 
-		if ((criterionClass == null) && (criterionName != null)) {
+		if (criterionClass == null && criterionName != null) {
 			try {
 				criterionClass = Tools.classForName(criterionName);
 			} catch (ClassNotFoundException e) {
@@ -306,8 +306,7 @@ public class RuleLearner extends AbstractLearner {
 				"The sample ratio of training data used for growing and pruning.", 0.0d, 1.0d, 0.9d);
 		type.setExpert(false);
 		types.add(type);
-		types.add(new ParameterTypeDouble(
-				SimpleRuleLearner.PARAMETER_PURENESS,
+		types.add(new ParameterTypeDouble(SimpleRuleLearner.PARAMETER_PURENESS,
 				"The desired pureness, i.e. the necessary amount of the major class in a covered subset in order become pure.",
 				0.0d, 1.0d, 0.9d, false));
 		types.add(new ParameterTypeDouble(PARAMETER_MINIMAL_PRUNE_BENEFIT,

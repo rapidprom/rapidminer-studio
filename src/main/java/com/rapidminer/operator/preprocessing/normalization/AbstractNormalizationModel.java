@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
  *
  * Complete list of developers available at our web site:
  *
@@ -18,23 +18,29 @@
  */
 package com.rapidminer.operator.preprocessing.normalization;
 
+import com.rapidminer.RapidMiner;
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.Attributes;
 import com.rapidminer.example.Example;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
+import com.rapidminer.operator.ProcessStoppedException;
 import com.rapidminer.operator.preprocessing.PreprocessingModel;
 import com.rapidminer.tools.Ontology;
+import com.rapidminer.tools.ParameterService;
 
 
 /**
  * @author Sebastian Land
- * 
+ *
  */
 public abstract class AbstractNormalizationModel extends PreprocessingModel {
 
 	private static final long serialVersionUID = 9003091723155805502L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 10_000;
 
 	protected AbstractNormalizationModel(ExampleSet exampleSet) {
 		super(exampleSet);
@@ -56,11 +62,9 @@ public abstract class AbstractNormalizationModel extends PreprocessingModel {
 		for (i = 0; i < newAttributes.length; i++) {
 			newAttributes[i] = oldAttributes[i];
 			if (oldAttributes[i].isNumerical()) {
-				if (!Ontology.ATTRIBUTE_VALUE_TYPE.isA(oldAttributes[i].getValueType(), Ontology.REAL)) {
-					newAttributes[i] = AttributeFactory.createAttribute(Ontology.REAL);
-					exampleSet.getExampleTable().addAttribute(newAttributes[i]);
-					attributes.addRegular(newAttributes[i]);
-				}
+				newAttributes[i] = AttributeFactory.createAttribute(Ontology.REAL);
+				exampleSet.getExampleTable().addAttribute(newAttributes[i]);
+				attributes.addRegular(newAttributes[i]);
 			}
 		}
 
@@ -85,14 +89,26 @@ public abstract class AbstractNormalizationModel extends PreprocessingModel {
 	 * This method must be implemented by the subclasses. Subclasses have to iterate over the
 	 * exampleset and on each example iterate over the oldAttribute array and set the new values on
 	 * the corresponding new attribute
+	 * @throws ProcessStoppedException
 	 */
-	protected void applyOnData(ExampleSet exampleSet, Attribute[] oldAttributes, Attribute[] newAttributes) {
+	protected void applyOnData(ExampleSet exampleSet, Attribute[] oldAttributes, Attribute[] newAttributes) throws ProcessStoppedException {
+		// initialize progress
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
+		}
+		int progressCounter = 0;
+
 		// copying data
 		for (Example example : exampleSet) {
 			for (int i = 0; i < oldAttributes.length; i++) {
 				if (oldAttributes[i].isNumerical()) {
 					example.setValue(newAttributes[i], computeValue(oldAttributes[i], example.getValue(oldAttributes[i])));
 				}
+			}
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted(progressCounter);
 			}
 		}
 	}
@@ -107,4 +123,16 @@ public abstract class AbstractNormalizationModel extends PreprocessingModel {
 		return getValue(attribute, oldValue);
 	}
 
+	@Override
+	protected boolean needsRemapping() {
+		return false;
+	}
+
+	@Override
+	protected boolean writesIntoExistingData() {
+		// this model does not write into the data but explodes inside a loop in standard mode
+		// because the number of attributes grows
+		return !Boolean
+				.parseBoolean(ParameterService.getParameterValue(RapidMiner.PROPERTY_RAPIDMINER_UPDATE_BETA_FEATURES));
+	}
 }

@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.meta;
 
 import java.util.Arrays;
@@ -28,6 +28,7 @@ import com.rapidminer.example.Example;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.operator.Model;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.learner.PredictionModel;
 import com.rapidminer.tools.Tools;
 
@@ -67,6 +68,11 @@ public class AdditiveRegressionModel extends PredictionModel implements MetaMode
 		PredictionModel.removePredictedLabel(exampleSet);
 
 		// apply all models to the example set sum up the predictions
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(residualModels.length);
+		}
 		for (int i = 0; i < residualModels.length; i++) {
 			exampleSet = residualModels[i].apply(exampleSet);
 			e = exampleSet.iterator();
@@ -75,6 +81,9 @@ public class AdditiveRegressionModel extends PredictionModel implements MetaMode
 				predictions[counter++] += shrinkage * e.next().getPredictedLabel();
 			}
 			PredictionModel.removePredictedLabel(exampleSet);
+			if (progress != null) {
+				progress.step();
+			}
 		}
 
 		// set final predictions

@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.tools.expression.internal.antlr;
 
 import static org.junit.Assert.assertEquals;
@@ -35,9 +35,9 @@ import com.rapidminer.example.Attribute;
 import com.rapidminer.example.Example;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.MemoryExampleTable;
 import com.rapidminer.example.table.PolynominalMapping;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.expression.ExampleResolver;
 import com.rapidminer.tools.expression.Expression;
@@ -91,15 +91,15 @@ public class ParserExamplesAndMacrosTest {
 		attributes.add(AttributeFactory.createAttribute("date", Ontology.DATE));
 		attributes.add(AttributeFactory.createAttribute("t[i]m\\e", Ontology.TIME));
 
-		MemoryExampleTable table = new MemoryExampleTable(attributes);
+		ExampleSetBuilder builder = ExampleSets.from(attributes);
 		double[] data = { 0, 1.5, 123142311234.0, 5, 1123424, 142313411234.0, 1423411234.0 };
-		table.addDataRow(new DoubleArrayDataRow(data));
+		builder.addRow(data);
 		data = new double[] { 1, 0.1234123134, 123142313411234.0, 11.25, 11.123, 1423131234.0, 1423434.0 };
-		table.addDataRow(new DoubleArrayDataRow(data));
+		builder.addRow(data);
 		data = new double[] { Double.NaN, Double.NaN, Double.NaN, 0.13445e-12, Double.NaN, Double.NaN, Double.NaN };
-		table.addDataRow(new DoubleArrayDataRow(data));
+		builder.addRow(data);
 
-		return table.createExampleSet();
+		return builder.build();
 	}
 
 	private Expression getExpressionWithExamplesAndMacros(String expression) throws ExpressionException {

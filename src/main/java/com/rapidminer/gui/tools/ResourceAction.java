@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.gui.tools;
 
 import java.awt.event.FocusEvent;
@@ -56,6 +56,8 @@ public abstract class ResourceAction extends ConditionalAction {
 	private final String key;
 
 	private final String iconName;
+
+	private final IconType iconType;
 
 	/**
 	 * Specifies the style of the icon.
@@ -139,10 +141,11 @@ public abstract class ResourceAction extends ConditionalAction {
 	 * @param i18nArgs
 	 */
 	public ResourceAction(int iconSize, String i18nKey, IconType iconType, Object... i18nArgs) {
-		super(i18nArgs == null || i18nArgs.length == 0 ? getMessage(i18nKey + ".label") : MessageFormat.format(
-				getMessage(i18nKey + ".label"), i18nArgs));
+		super(i18nArgs == null || i18nArgs.length == 0 ? getMessage(i18nKey + ".label")
+				: MessageFormat.format(getMessage(i18nKey + ".label"), i18nArgs));
 		putValue(ACTION_COMMAND_KEY, i18nKey);
 		this.key = i18nKey;
+		this.iconType = iconType;
 		String mne = getMessageOrNull(i18nKey + ".mne");
 		if (mne != null && mne.length() > 0) {
 			String name = (String) getValue(NAME);
@@ -174,10 +177,11 @@ public abstract class ResourceAction extends ConditionalAction {
 				tipBuilder.append(")");
 				tip = tipBuilder.toString();
 			}
-			putValue(SHORT_DESCRIPTION, i18nArgs == null || i18nArgs.length == 0 ? tip : MessageFormat.format(tip, i18nArgs));
+			putValue(SHORT_DESCRIPTION,
+					i18nArgs == null || i18nArgs.length == 0 ? tip : MessageFormat.format(tip, i18nArgs));
 		}
 		this.iconName = getMessageOrNull(i18nKey + ".icon");
-		if (getIconName() != null) {
+		if (getIconName() != null && !getIconName().trim().isEmpty()) {
 			ImageIcon small = null;
 			ImageIcon large = null;
 			if (iconType == IconType.FLAT) {
@@ -188,7 +192,7 @@ public abstract class ResourceAction extends ConditionalAction {
 				small = SwingTools.createIcon("16/" + getIconName(), iconType == IconType.MONO);
 			}
 			if (large == null) {
-				large = SwingTools.createIcon(iconSize + "/" + getIconName());
+				large = SwingTools.createIcon(iconSize + "/" + getIconName(), iconType == IconType.MONO);
 			}
 			putValue(LARGE_ICON_KEY, iconSize == 16 ? small != null ? small : large : large);
 			putValue(SMALL_ICON, small != null ? small : large);
@@ -292,6 +296,10 @@ public abstract class ResourceAction extends ConditionalAction {
 
 	public String getIconName() {
 		return iconName;
+	}
+
+	public IconType getIconType() {
+		return iconType;
 	}
 
 	private static String getMessage(String key) {

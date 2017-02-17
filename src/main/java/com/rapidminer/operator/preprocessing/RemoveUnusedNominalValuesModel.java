@@ -1,22 +1,25 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.preprocessing;
+
+import java.util.Iterator;
+import java.util.Map;
 
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.AttributeRole;
@@ -30,15 +33,13 @@ import com.rapidminer.example.table.NominalMapping;
 import com.rapidminer.example.table.PolynominalMapping;
 import com.rapidminer.example.table.ViewAttribute;
 import com.rapidminer.operator.OperatorException;
-
-import java.util.Iterator;
-import java.util.Map;
+import com.rapidminer.operator.OperatorProgress;
 
 
 /**
  * This model removes all nominal values. During application it might happen that missing values are
  * introduced. If applied on data, new columns are created in a cloned example set.
- * 
+ *
  * @author Sebastian Land
  */
 public class RemoveUnusedNominalValuesModel extends PreprocessingModel {
@@ -59,6 +60,9 @@ public class RemoveUnusedNominalValuesModel extends PreprocessingModel {
 	}
 
 	private static final long serialVersionUID = 1L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 5000;
+
 	private Map<String, MappingTranslation> translations;
 
 	protected RemoveUnusedNominalValuesModel(ExampleSet exampleSet, Map<String, MappingTranslation> translations) {
@@ -95,7 +99,7 @@ public class RemoveUnusedNominalValuesModel extends PreprocessingModel {
 	@Override
 	public double getValue(Attribute targetAttribute, double value) {
 		MappingTranslation mappingTranslation = translations.get(targetAttribute.getName());
-		if (mappingTranslation != null) {
+		if (mappingTranslation != null && !Double.isNaN(value)) {
 			String nominalValue = mappingTranslation.originalMapping.mapIndex((int) value);
 			int result = mappingTranslation.newMapping.getIndex(nominalValue);
 			if (result != -1) {
@@ -112,6 +116,12 @@ public class RemoveUnusedNominalValuesModel extends PreprocessingModel {
 
 		Attributes attributes = exampleSet.getAttributes();
 		Iterator<Attribute> iterator = attributes.iterator();
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(attributes.size());
+		}
+		int progressCounter = 0;
 		while (iterator.hasNext()) {
 			Attribute currentAttribute = iterator.next();
 			MappingTranslation mappingTranslation = translations.get(currentAttribute.getName());
@@ -144,8 +154,16 @@ public class RemoveUnusedNominalValuesModel extends PreprocessingModel {
 				}
 				newAttribute.setMapping(mappingTranslation.newMapping);
 			}
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted(progressCounter);
+			}
 		}
 
 		return resultSet;
+	}
+
+	@Override
+	protected boolean needsRemapping() {
+		return isCreateView();
 	}
 }

@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.functions.kernel;
 
 import java.util.Iterator;
@@ -26,6 +26,7 @@ import com.rapidminer.example.Example;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.set.ExampleSetUtilities;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.learner.FormulaProvider;
 import com.rapidminer.operator.learner.functions.kernel.jmysvm.examples.SVMExample;
 import com.rapidminer.operator.learner.functions.kernel.jmysvm.examples.SVMExamples;
@@ -45,6 +46,8 @@ public abstract class AbstractMySVMModel extends KernelModel implements FormulaP
 
 	private static final long serialVersionUID = 2812901947459843681L;
 
+	private static final int OPERATOR_PROGRESS_STEPS = 5000;
+
 	private com.rapidminer.operator.learner.functions.kernel.jmysvm.examples.SVMExamples model;
 
 	private Kernel kernel;
@@ -52,7 +55,8 @@ public abstract class AbstractMySVMModel extends KernelModel implements FormulaP
 	private double[] weights = null;
 
 	public AbstractMySVMModel(ExampleSet exampleSet,
-			com.rapidminer.operator.learner.functions.kernel.jmysvm.examples.SVMExamples model, Kernel kernel, int kernelType) {
+			com.rapidminer.operator.learner.functions.kernel.jmysvm.examples.SVMExamples model, Kernel kernel,
+			int kernelType) {
 		super(exampleSet, ExampleSetUtilities.SetsCompareOption.ALLOW_SUPERSET,
 				ExampleSetUtilities.TypesCompareOption.ALLOW_SAME_PARENTS);
 		this.model = model;
@@ -185,6 +189,12 @@ public abstract class AbstractMySVMModel extends KernelModel implements FormulaP
 		if (kernel instanceof KernelDot) {
 			if (weights != null) {
 				Map<Integer, MeanVariance> meanVariances = model.getMeanVariances();
+				OperatorProgress progress = null;
+				if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+					progress = getOperator().getProgress();
+					progress.setTotal(exampleSet.size());
+				}
+				int progressCounter = 0;
 				for (Example example : exampleSet) {
 					double prediction = getBias();
 					int a = 0;
@@ -202,6 +212,10 @@ public abstract class AbstractMySVMModel extends KernelModel implements FormulaP
 						a++;
 					}
 					setPrediction(example, prediction);
+
+					if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+						progress.setCompleted(progressCounter);
+					}
 				}
 				return exampleSet;
 			}

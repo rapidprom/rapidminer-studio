@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.gui.viewer.metadata;
 
 import java.util.ArrayList;
@@ -60,6 +60,9 @@ public class MetaDataStatisticsController {
 
 	/** the {@link UpdateQueue} used to sort */
 	private UpdateQueue sortingQueue;
+
+	/** the {@link SwingWorker} to recalculate statistics */
+	private SwingWorker<Void, Void> worker;
 
 	/**
 	 * needed to restore the initial order; faster way as opposed to sorting (which is not easily
@@ -106,9 +109,9 @@ public class MetaDataStatisticsController {
 			// updated
 			barrier.await();
 		} catch (InterruptedException e) {
-			LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.meta_data_view.calculation_interrupted", e);
+			LogService.getRoot().log(Level.INFO, "com.rapidminer.gui.meta_data_view.calc_interrupted");
 		} catch (BrokenBarrierException e) {
-			LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.meta_data_view.calc_sync_broken", e);
+			LogService.getRoot().log(Level.INFO, "com.rapidminer.gui.meta_data_view.calc_sync_broken");
 		}
 	}
 
@@ -326,6 +329,14 @@ public class MetaDataStatisticsController {
 	}
 
 	/**
+	 * Stops the statistics recalculation and the sorting queue.
+	 */
+	void stop() {
+		worker.cancel(true);
+		sortingQueue.shutdown();
+	}
+
+	/**
 	 * Sets the desired {@link SortingDirection} for the given {@link SortingType}.
 	 *
 	 * @param type
@@ -365,11 +376,11 @@ public class MetaDataStatisticsController {
 			// apply filter on non empty string
 			for (AbstractAttributeStatisticsModel statModel : model.getOrderedAttributeStatisticsModels()) {
 				String attName = statModel.getAttribute().getName();
-				boolean show = attName.contains(model.getFilterNameString());
+				boolean show = attName.toLowerCase().contains(model.getFilterNameString().toLowerCase());
 				if (!show) {
 					visibleCount--;
 				}
-				model.setAttributeStatisticsModelVisible(statModel, attName.contains(model.getFilterNameString()));
+				model.setAttributeStatisticsModelVisible(statModel, show);
 			}
 		}
 
@@ -488,8 +499,8 @@ public class MetaDataStatisticsController {
 
 			@Override
 			public int compare(AbstractAttributeStatisticsModel o1, AbstractAttributeStatisticsModel o2) {
-				int sortResult = Ontology.ATTRIBUTE_VALUE_TYPE.mapIndex(o1.getAttribute().getValueType()).compareTo(
-						Ontology.ATTRIBUTE_VALUE_TYPE.mapIndex(o2.getAttribute().getValueType()));
+				int sortResult = Ontology.ATTRIBUTE_VALUE_TYPE.mapIndex(o1.getAttribute().getValueType())
+						.compareTo(Ontology.ATTRIBUTE_VALUE_TYPE.mapIndex(o2.getAttribute().getValueType()));
 				switch (direction) {
 					case ASCENDING:
 						return -1 * sortResult;
@@ -598,7 +609,7 @@ public class MetaDataStatisticsController {
 	 * @param exampleSet
 	 */
 	private void calculateStatistics(final ExampleSet exampleSet) {
-		final SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+		worker = new SwingWorker<Void, Void>() {
 
 			@Override
 			protected Void doInBackground() throws Exception {

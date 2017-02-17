@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.nio;
 
 import java.io.File;
@@ -28,22 +28,11 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import jxl.Cell;
-import jxl.CellType;
-import jxl.DateCell;
-import jxl.NumberCell;
-import jxl.Sheet;
-import jxl.Workbook;
-import jxl.WorkbookSettings;
-import jxl.biff.EmptyCell;
-import jxl.format.CellFormat;
-import jxl.read.biff.BiffException;
-
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.operator.Annotations;
 import com.rapidminer.operator.IOObject;
 import com.rapidminer.operator.OperatorDescription;
@@ -62,6 +51,17 @@ import com.rapidminer.parameter.PortProvider;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.Tools;
 import com.rapidminer.tools.io.Encoding;
+
+import jxl.Cell;
+import jxl.CellType;
+import jxl.DateCell;
+import jxl.NumberCell;
+import jxl.Sheet;
+import jxl.Workbook;
+import jxl.WorkbookSettings;
+import jxl.biff.EmptyCell;
+import jxl.format.CellFormat;
+import jxl.read.biff.BiffException;
 
 
 /**
@@ -211,7 +211,7 @@ public class ExcelFormatExampleSource extends AbstractExampleSource {
 		for (int i = 0; i < attributeNames.length; i++) {
 			attributes[i] = AttributeFactory.createAttribute(attributeNames[i], Ontology.NOMINAL);
 		}
-		MemoryExampleTable table = new MemoryExampleTable(attributes);
+		ExampleSetBuilder builder = ExampleSets.from(attributes);
 
 		for (int r = 0; r < totalNumberOfRows; r++) {
 			if (emptyRows[r]) {
@@ -252,15 +252,15 @@ public class ExcelFormatExampleSource extends AbstractExampleSource {
 					formatInfo.append("font_size: " + cellFormat.getFont().getPointSize() + "; ");
 					formatInfo.append("font_italic: " + cellFormat.getFont().isItalic() + "; ");
 					formatInfo.append("font_struckout: " + cellFormat.getFont().isStruckout() + ";");
-					data[currentC + numberOfAttributes] = attributes[currentC + numberOfAttributes].getMapping().mapString(
-							formatInfo.toString());
+					data[currentC + numberOfAttributes] = attributes[currentC + numberOfAttributes].getMapping()
+							.mapString(formatInfo.toString());
 				}
 				currentC++;
 			}
-			table.addDataRow(new DoubleArrayDataRow(data));
+			builder.addRow(data);
 		}
 
-		ExampleSet exampleSet = table.createExampleSet();
+		ExampleSet exampleSet = builder.build();
 		if (sourceAnnotation != null) {
 			exampleSet.getAnnotations().setAnnotation(Annotations.KEY_SOURCE, sourceAnnotation);
 		}
@@ -283,11 +283,11 @@ public class ExcelFormatExampleSource extends AbstractExampleSource {
 		types.add(FileInputPortHandler.makeFileParameterType(this, PARAMETER_EXCEL_FILE,
 				"Name of the file to read the data from.", "xls", new PortProvider() {
 
-			@Override
-			public Port getPort() {
-				return fileInputPort;
-			}
-		}));
+					@Override
+					public Port getPort() {
+						return fileInputPort;
+					}
+				}));
 
 		types.add(new ParameterTypeInt(PARAMETER_SHEET_NUMBER, "The number of the sheet which should be imported.", 1,
 				Integer.MAX_VALUE, 1, false));

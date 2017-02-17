@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.meta;
 
 import java.util.Iterator;
@@ -27,6 +27,7 @@ import com.rapidminer.example.Example;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.operator.Model;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.learner.PredictionModel;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.Tools;
@@ -92,12 +93,20 @@ public class BaggingModel extends PredictionModel implements MetaModel {
 			}
 
 			reader = origExampleSet.iterator();
+			OperatorProgress progress = null;
+			if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+				progress = getOperator().getProgress();
+				progress.setTotal(this.getNumberOfModels());
+			}
 			for (int modelNr = 0; modelNr < this.getNumberOfModels(); modelNr++) {
 				Model model = this.getModel(modelNr);
 				ExampleSet exampleSet = (ExampleSet) origExampleSet.clone();
 				exampleSet = model.apply(exampleSet);
 				updateEstimates(exampleSet, modelNr, specialAttributes);
 				PredictionModel.removePredictedLabel(exampleSet);
+				if (progress != null) {
+					progress.step();
+				}
 			}
 
 			// Turn prediction weights into confidences and a crisp prediction:
@@ -113,6 +122,11 @@ public class BaggingModel extends PredictionModel implements MetaModel {
 		} else {
 			// numerical prediction
 			double[] predictionSums = new double[origExampleSet.size()];
+			OperatorProgress progress = null;
+			if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+				progress = getOperator().getProgress();
+				progress.setTotal(this.getNumberOfModels());
+			}
 			for (Model model : models) {
 				ExampleSet resultSet = model.apply((ExampleSet) origExampleSet.clone());
 				int index = 0;
@@ -121,6 +135,9 @@ public class BaggingModel extends PredictionModel implements MetaModel {
 					predictionSums[index++] += example.getValue(innerPredictedLabel);
 				}
 				PredictionModel.removePredictedLabel(resultSet);
+				if (progress != null) {
+					progress.step();
+				}
 			}
 
 			int index = 0;

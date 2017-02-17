@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.example.table;
 
 import java.util.ArrayList;
@@ -63,7 +63,7 @@ public class PolynominalMapping implements NominalMapping {
 		}
 	}
 
-	/* pp */PolynominalMapping(NominalMapping mapping) {
+	/* pp */ PolynominalMapping(NominalMapping mapping) {
 		this.symbolToIndexMap.clear();
 		this.indexToSymbolMap.clear();
 		for (int i = 0; i < mapping.size(); i++) {
@@ -105,9 +105,6 @@ public class PolynominalMapping implements NominalMapping {
 		int index = getIndex(str);
 		// if string is not yet in the map, add it
 		if (index < 0) {
-			// new string -> insert
-			str = new String(str);  // we copy the name if the underlying char array value is larger
-			// than needed
 			indexToSymbolMap.add(str);
 			index = indexToSymbolMap.size() - 1;
 			symbolToIndexMap.put(str, index);
@@ -137,8 +134,8 @@ public class PolynominalMapping implements NominalMapping {
 	@Override
 	public String mapIndex(int index) {
 		if (index < 0 || index >= indexToSymbolMap.size()) {
-			throw new AttributeTypeException("Cannot map index of nominal attribute to nominal value: index " + index
-					+ " is out of bounds!");
+			throw new AttributeTypeException(
+					"Cannot map index of nominal attribute to nominal value: index " + index + " is out of bounds!");
 		}
 		return indexToSymbolMap.get(index);
 	}

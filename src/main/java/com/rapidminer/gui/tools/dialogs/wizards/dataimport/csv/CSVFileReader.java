@@ -1,37 +1,22 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.gui.tools.dialogs.wizards.dataimport.csv;
-
-import com.rapidminer.example.Attribute;
-import com.rapidminer.example.ExampleSet;
-import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DataRow;
-import com.rapidminer.example.table.DataRowReader;
-import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.ExampleTable;
-import com.rapidminer.example.table.MemoryExampleTable;
-import com.rapidminer.operator.ports.metadata.AttributeMetaData;
-import com.rapidminer.operator.ports.metadata.ExampleSetMetaData;
-import com.rapidminer.operator.ports.metadata.MetaData;
-import com.rapidminer.tools.CSVParseException;
-import com.rapidminer.tools.LineParser;
-import com.rapidminer.tools.Ontology;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,10 +29,24 @@ import java.util.List;
 
 import org.jfree.util.Log;
 
+import com.rapidminer.example.Attribute;
+import com.rapidminer.example.ExampleSet;
+import com.rapidminer.example.table.AttributeFactory;
+import com.rapidminer.example.table.DataRow;
+import com.rapidminer.example.table.DataRowReader;
+import com.rapidminer.example.table.DoubleArrayDataRow;
+import com.rapidminer.example.utils.ExampleSets;
+import com.rapidminer.operator.ports.metadata.AttributeMetaData;
+import com.rapidminer.operator.ports.metadata.ExampleSetMetaData;
+import com.rapidminer.operator.ports.metadata.MetaData;
+import com.rapidminer.tools.CSVParseException;
+import com.rapidminer.tools.LineParser;
+import com.rapidminer.tools.Ontology;
+
 
 /**
  * A helper class for reading CSV files
- * 
+ *
  * @author Tobias Malbrecht
  */
 public class CSVFileReader {
@@ -131,8 +130,7 @@ public class CSVFileReader {
 		for (AttributeMetaData amd : metaData.getAllAttributes()) {
 			attributes.add(AttributeFactory.createAttribute(amd.getName(), amd.getValueType()));
 		}
-		ExampleTable table = new MemoryExampleTable(attributes, getDataRowReader(attributes));
-		return table.createExampleSet();
+		return ExampleSets.from(attributes).withDataRowReader(getDataRowReader(attributes)).build();
 	}
 
 	public Iterator<String[]> getDataReader() throws IOException {

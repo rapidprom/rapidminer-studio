@@ -1,28 +1,31 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.features.weighting;
+
+import java.util.LinkedList;
+import java.util.List;
 
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.AttributeWeights;
 import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.operator.OperatorDescription;
 import com.rapidminer.operator.OperatorException;
@@ -34,15 +37,12 @@ import com.rapidminer.operator.ports.metadata.GenerateNewExampleSetMDRule;
 import com.rapidminer.operator.ports.metadata.MetaData;
 import com.rapidminer.tools.Ontology;
 
-import java.util.LinkedList;
-import java.util.List;
-
 
 /**
  * This operator creates a new example set from the given attribute weights. The example set will
  * have two columns, the name of the attribute and the weight for this attribute. It will have as
  * many rows as are described by the give attribute weights.
- * 
+ *
  * @author Ingo Mierswa
  */
 public class AttributeWeights2ExampleSet extends Operator {
@@ -78,13 +78,13 @@ public class AttributeWeights2ExampleSet extends Operator {
 		attributes.add(nameAttribute);
 		attributes.add(weightAttribute);
 
-		MemoryExampleTable table = new MemoryExampleTable(attributes);
+		ExampleSetBuilder builder = ExampleSets.from(attributes).withExpectedSize(weights.size());
 		for (String name : weights.getAttributeNames()) {
 			double[] data = new double[2];
 			data[0] = nameAttribute.getMapping().mapString(name);
 			data[1] = weights.getWeight(name);
-			table.addDataRow(new DoubleArrayDataRow(data));
+			builder.addRow(data);
 		}
-		exampleSetOutput.deliver(table.createExampleSet());
+		exampleSetOutput.deliver(builder.build());
 	}
 }

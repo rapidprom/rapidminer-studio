@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.functions.neuralnet;
 
 import java.util.ArrayList;
@@ -30,6 +30,7 @@ import com.rapidminer.example.Statistics;
 import com.rapidminer.example.set.ExampleSetUtilities;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.ProcessStoppedException;
 import com.rapidminer.operator.learner.PredictionModel;
 import com.rapidminer.tools.RandomGenerator;
@@ -45,6 +46,8 @@ public class ImprovedNeuralNetModel extends PredictionModel {
 
 	private static final long serialVersionUID = -2206598483097451366L;
 
+	private static final int OPERATOR_PROGRESS_STEPS = 1000;
+
 	private static final ActivationFunction SIGMOID_FUNCTION = new SigmoidFunction();
 
 	private static final ActivationFunction LINEAR_FUNCTION = new LinearFunction();
@@ -58,7 +61,8 @@ public class ImprovedNeuralNetModel extends PredictionModel {
 	private OutputNode[] outputNodes = new OutputNode[0];
 
 	protected ImprovedNeuralNetModel(ExampleSet trainingExampleSet) {
-		super(trainingExampleSet, ExampleSetUtilities.SetsCompareOption.ALLOW_SUPERSET, ExampleSetUtilities.TypesCompareOption.ALLOW_SAME_PARENTS);
+		super(trainingExampleSet, ExampleSetUtilities.SetsCompareOption.ALLOW_SUPERSET,
+				ExampleSetUtilities.TypesCompareOption.ALLOW_SAME_PARENTS);
 		this.attributeNames = com.rapidminer.example.Tools.getRegularAttributeNames(trainingExampleSet);
 	}
 
@@ -183,6 +187,12 @@ public class ImprovedNeuralNetModel extends PredictionModel {
 
 	@Override
 	public ExampleSet performPrediction(ExampleSet exampleSet, Attribute predictedLabel) throws OperatorException {
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
+		}
+		int progressCounter = 0;
 		for (Example example : exampleSet) {
 			resetNetwork();
 
@@ -216,6 +226,9 @@ public class ImprovedNeuralNetModel extends PredictionModel {
 			} else {
 				double value = outputNodes[0].calculateValue(true, example);
 				example.setValue(predictedLabel, value);
+			}
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted(progressCounter);
 			}
 		}
 
@@ -362,11 +375,13 @@ public class ImprovedNeuralNetModel extends PredictionModel {
 			// String layerName = layerNames[layerIndex];
 			int numberOfNodes = layerSizes[layerIndex];
 			for (int nodeIndex = 0; nodeIndex < numberOfNodes; nodeIndex++) {
-				InnerNode innerNode = new InnerNode("Node " + (nodeIndex + 1), layerIndex, randomGenerator, SIGMOID_FUNCTION);
+				InnerNode innerNode = new InnerNode("Node " + (nodeIndex + 1), layerIndex, randomGenerator,
+						SIGMOID_FUNCTION);
 				addNode(innerNode);
 				if (layerIndex > 0) {
 					// connect to all nodes of previous layer
-					for (int i = innerNodes.length - nodeIndex - 1 - lastLayerSize; i < innerNodes.length - nodeIndex - 1; i++) {
+					for (int i = innerNodes.length - nodeIndex - 1 - lastLayerSize; i < innerNodes.length - nodeIndex
+							- 1; i++) {
 						Node.connect(innerNodes[i], innerNode);
 					}
 				}

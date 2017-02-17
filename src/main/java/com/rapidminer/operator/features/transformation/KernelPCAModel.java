@@ -1,26 +1,24 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.features.transformation;
 
 import java.util.ArrayList;
-
-import Jama.Matrix;
 
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.Attributes;
@@ -29,9 +27,12 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.operator.AbstractModel;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.UserError;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.math.kernels.Kernel;
+
+import Jama.Matrix;
 
 
 /**
@@ -42,6 +43,12 @@ import com.rapidminer.tools.math.kernels.Kernel;
 public class KernelPCAModel extends AbstractModel {
 
 	private static final long serialVersionUID = -6699248775014738833L;
+
+	private static final int OPERATOR_PROGRESS_STEPS_1 = 100;
+
+	private static final int OPERATOR_PROGRESS_STEPS_2 = 10;
+
+	private static final int INTERMEDIATE_PROGRESS = 20;
 
 	private Matrix eigenVectors;
 
@@ -78,16 +85,27 @@ public class KernelPCAModel extends AbstractModel {
 
 		checkNames(attributes);
 
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(100);
+		}
+
 		log("Adding new the derived features...");
 		Attribute[] pcatts = new Attribute[exampleValues.size()];
 		for (int i = 0; i < exampleValues.size(); i++) {
 			pcatts[i] = AttributeFactory.createAttribute("kpc_" + (i + 1), Ontology.REAL);
 			exampleSet.getExampleTable().addAttribute(pcatts[i]);
 			exampleSet.getAttributes().addRegular(pcatts[i]);
+			if (progress != null && i % OPERATOR_PROGRESS_STEPS_1 == 0) {
+				progress.setCompleted((int) ((double) INTERMEDIATE_PROGRESS * i / exampleValues.size()));
+			}
 		}
 		log("Calculating new features");
 
 		Matrix distanceValues = new Matrix(1, exampleValues.size());
+
+		int progressCounter = 0;
 		for (Example example : exampleSet) {
 			int i = 0;
 			for (double[] trainValue : exampleValues) {
@@ -96,6 +114,10 @@ public class KernelPCAModel extends AbstractModel {
 			Matrix resultValues = eigenVectors.times(distanceValues.transpose());
 			for (int j = 0; j < exampleValues.size(); j++) {
 				example.setValue(pcatts[j], resultValues.get(j, 0));
+			}
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS_2 == 0) {
+				progress.setCompleted((int) ((100.0 - INTERMEDIATE_PROGRESS) * progressCounter / exampleSet.size()
+						+ INTERMEDIATE_PROGRESS));
 			}
 		}
 

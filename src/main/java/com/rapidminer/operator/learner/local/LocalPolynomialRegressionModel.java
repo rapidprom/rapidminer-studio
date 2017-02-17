@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.local;
 
 import java.io.Serializable;
@@ -29,6 +29,7 @@ import com.rapidminer.example.Example;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.set.ExampleSetUtilities;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.learner.PredictionModel;
 import com.rapidminer.tools.Tools;
 import com.rapidminer.tools.container.Tupel;
@@ -45,7 +46,7 @@ import com.rapidminer.tools.math.smoothing.SmoothingKernel;
 public class LocalPolynomialRegressionModel extends PredictionModel {
 
 	public static class RegressionData implements Serializable {
-
+		
 		private static final long serialVersionUID = 8540161261369474329L;
 
 		private double[] exampleValues;
@@ -94,6 +95,13 @@ public class LocalPolynomialRegressionModel extends PredictionModel {
 	public ExampleSet performPrediction(ExampleSet exampleSet, Attribute predictedLabel) throws OperatorException {
 		Attributes attributes = exampleSet.getAttributes();
 
+		// initialize progress
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
+		}
+				
 		double[] probe = new double[attributes.size()];
 		for (Example example : exampleSet) {
 			// copying example values
@@ -143,6 +151,10 @@ public class LocalPolynomialRegressionModel extends PredictionModel {
 				} else {
 					example.setPredictedLabel(Double.NaN);
 				}
+			}
+			
+			if (progress != null) {
+				progress.step();
 			}
 		}
 		return exampleSet;

@@ -1,23 +1,34 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.preprocessing.join;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import com.rapidminer.RapidMiner;
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.AttributeRole;
 import com.rapidminer.example.Example;
@@ -25,7 +36,8 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.example.table.DataRow;
 import com.rapidminer.example.table.DataRowFactory;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.operator.MissingIOObjectException;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.operator.OperatorDescription;
@@ -34,6 +46,7 @@ import com.rapidminer.operator.ProcessSetupError.Severity;
 import com.rapidminer.operator.SimpleProcessSetupError;
 import com.rapidminer.operator.UserError;
 import com.rapidminer.operator.annotation.ResourceConsumptionEstimator;
+import com.rapidminer.operator.generator.ExampleSetGenerator;
 import com.rapidminer.operator.ports.InputPort;
 import com.rapidminer.operator.ports.InputPortExtender;
 import com.rapidminer.operator.ports.OutputPort;
@@ -49,16 +62,8 @@ import com.rapidminer.parameter.ParameterTypeCategory;
 import com.rapidminer.parameter.UndefinedParameterError;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.OperatorResourceConsumptionHandler;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import com.rapidminer.tools.ParameterService;
+import com.rapidminer.tools.parameter.internal.DataManagementParameterHelper;
 
 
 /**
@@ -115,7 +120,7 @@ public class ExampleSetMerge extends Operator {
 	private final OutputPort mergedOutput = getOutputPorts().createPort("merged set");
 
 	/** The parameter name for &quot;Determines, how the data is represented internally.&quot; */
-	public static final String PARAMETER_DATAMANAGEMENT = "datamanagement";
+	public static final String PARAMETER_DATAMANAGEMENT = ExampleSetGenerator.PARAMETER_DATAMANAGEMENT;
 
 	public ExampleSetMerge(OperatorDescription description) {
 		super(description);
@@ -286,10 +291,20 @@ public class ExampleSetMerge extends Operator {
 				specialAttributesMap.put(newAttribute, role.getSpecialName());
 			}
 		}
-		MemoryExampleTable exampleTable = new MemoryExampleTable(newAttributeList);
+		int totalSize = 0;
+		for (ExampleSet set : allExampleSets) {
+			totalSize += set.size();
+		}
+		ExampleSetBuilder builder = ExampleSets.from(newAttributeList).withExpectedSize(totalSize);
+
+		int datamanagement = getParameterAsInt(PARAMETER_DATAMANAGEMENT);
+		if (Boolean.parseBoolean(ParameterService.getParameterValue(RapidMiner.PROPERTY_RAPIDMINER_UPDATE_BETA_FEATURES))) {
+			datamanagement = DataRowFactory.TYPE_DOUBLE_ARRAY;
+			builder.withOptimizationHint(DataManagementParameterHelper.getSelectedDataManagement(this));
+		}
 
 		// now fill table with rows, copied from source example sets
-		DataRowFactory factory = new DataRowFactory(getParameterAsInt(PARAMETER_DATAMANAGEMENT), '.');
+		DataRowFactory factory = new DataRowFactory(datamanagement, '.');
 		int numberOfAttributes = newAttributeList.size();
 		for (ExampleSet exampleSet : allExampleSets) {
 			for (Example example : exampleSet) {
@@ -310,21 +325,22 @@ public class ExampleSetMerge extends Operator {
 						}
 					}
 				}
-				// adding new row to table
-				exampleTable.addDataRow(dataRow);
+				// adding new row to builder
+				builder.addDataRow(dataRow);
 			}
 			checkForStop();
 		}
 		// create result example set
-		ExampleSet resultSet = exampleTable.createExampleSet(specialAttributesMap);
+		ExampleSet resultSet = builder.withRoles(specialAttributesMap).build();
 		resultSet.getAnnotations().addAll(firstSet.getAnnotations());
 		return resultSet;
 	}
 
 	private void throwIncompatible(Attribute oldAttribute, Attribute otherAttribute) throws UserError {
-		throw new UserError(this, 925, "Attribute '" + oldAttribute.getName() + "' has incompatible types ("
-				+ Ontology.ATTRIBUTE_VALUE_TYPE.mapIndex(oldAttribute.getValueType()) + " and "
-				+ Ontology.ATTRIBUTE_VALUE_TYPE.mapIndex(otherAttribute.getValueType()) + ") in two input sets.");
+		throw new UserError(this, 925,
+				"Attribute '" + oldAttribute.getName() + "' has incompatible types ("
+						+ Ontology.ATTRIBUTE_VALUE_TYPE.mapIndex(oldAttribute.getValueType()) + " and "
+						+ Ontology.ATTRIBUTE_VALUE_TYPE.mapIndex(otherAttribute.getValueType()) + ") in two input sets.");
 	}
 
 	/**
@@ -375,13 +391,12 @@ public class ExampleSetMerge extends Operator {
 	@Override
 	public List<ParameterType> getParameterTypes() {
 		List<ParameterType> types = super.getParameterTypes();
-		types.add(new ParameterTypeCategory(PARAMETER_DATAMANAGEMENT, "Determines, how the data is represented internally.",
-				DataRowFactory.TYPE_NAMES, DataRowFactory.TYPE_DOUBLE_ARRAY));
+		DataManagementParameterHelper.addParameterTypes(types, this);
 
 		// deprecated parameter
 		ParameterType type = new ParameterTypeCategory("merge_type",
-				"Indicates if all input example sets or only the first two example sets should be merged.", new String[] {
-						"all", "first_two" }, 0);
+				"Indicates if all input example sets or only the first two example sets should be merged.",
+				new String[] { "all", "first_two" }, 0);
 		type.setDeprecated();
 		types.add(type);
 		return types;

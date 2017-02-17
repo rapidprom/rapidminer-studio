@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator;
 
 import com.rapidminer.example.ExampleSet;
@@ -42,10 +42,10 @@ public interface Model extends ResultObject, Readable {
 	 * already implements all necessary functionality.
 	 */
 	public HeaderExampleSet getTrainingHeader();
-
+	
 	/**
-	 * Applies the model on the given example set. Please note that the delivered example set might
-	 * be the same as the input example set. This does, however, no always to be the case.
+	 * Applies the model on the given {@link ExampleSet}. Please note that the delivered {@link ExampleSet} might
+	 * be the same as the input {@link ExampleSet}. This is, however, not always the case.
 	 */
 	public ExampleSet apply(ExampleSet testSet) throws OperatorException;
 

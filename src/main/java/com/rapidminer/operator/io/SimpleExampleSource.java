@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.io;
 
 import java.io.File;
@@ -29,9 +29,9 @@ import java.util.List;
 import com.rapidminer.example.Attributes;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.DataRowFactory;
-import com.rapidminer.example.table.ExampleTable;
 import com.rapidminer.example.table.FileDataRowReader;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.gui.tools.dialogs.wizards.dataimport.csv.CSVFileReader;
 import com.rapidminer.operator.OperatorDescription;
 import com.rapidminer.operator.OperatorException;
@@ -244,10 +244,10 @@ public class SimpleExampleSource extends AbstractExampleSource {
 		AttributeSet attributeSet = new AttributeSet(new AttributeDataSources(attributeDataSources, file, encoding));
 
 		// create table and example set
-		ExampleTable table = new MemoryExampleTable(attributeSet.getAllAttributes(), reader);
-		ExampleSet result = table.createExampleSet(attributeSet);
-
-		return result;
+		ExampleSetBuilder builder = ExampleSets.from(attributeSet.getAllAttributes()).withDataRowReader(reader);
+		attributeSet.getSpecialAttributes().entrySet().stream()
+				.forEach(entry -> builder.withRole(entry.getValue(), entry.getKey()));
+		return builder.build();
 	}
 
 	private static void resetAttributeType(List<AttributeDataSource> attributeDataSources, String attribute, int column,

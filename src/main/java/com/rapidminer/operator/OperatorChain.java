@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator;
 
 import java.util.Arrays;
@@ -25,7 +25,13 @@ import java.util.List;
 
 import com.rapidminer.Process;
 import com.rapidminer.operator.ports.InputPort;
+import com.rapidminer.operator.ports.InputPorts;
+import com.rapidminer.operator.ports.OutputPort;
+import com.rapidminer.operator.ports.OutputPorts;
 import com.rapidminer.operator.ports.Port;
+import com.rapidminer.operator.ports.PortOwner;
+import com.rapidminer.operator.ports.impl.InputPortsImpl;
+import com.rapidminer.operator.ports.impl.OutputPortsImpl;
 import com.rapidminer.operator.ports.metadata.MDTransformer;
 import com.rapidminer.operator.ports.metadata.Precondition;
 import com.rapidminer.tools.DelegatingObserver;
@@ -114,6 +120,36 @@ public abstract class OperatorChain extends Operator {
 
 	protected ExecutionUnit createSubprocess(int index) {
 		return new ExecutionUnit(this, "Subprocess");
+	}
+
+	/**
+	 * This method returns an arbitrary implementation of {@link InputPorts} for inner sink port
+	 * initialization. Useful for adding an arbitrary implementation (e.g. changing port creation &
+	 * (dis)connection behavior, optionally by customized {@link InputPort} instances) by overriding
+	 * this method.
+	 * 
+	 * @param portOwner
+	 *            The owner of the ports.
+	 * @return The {@link InputPorts} instance, never {@code null}.
+	 * @since 7.3.0
+	 */
+	protected InputPorts createInnerSinks(PortOwner portOwner) {
+		return new InputPortsImpl(portOwner);
+	}
+
+	/**
+	 * This method returns an arbitrary implementation of {@link OutputPorts} for inner source port
+	 * initialization. Useful for adding an arbitrary implementation (e.g. changing port creation &
+	 * (dis)connection behavior, optionally by customized {@link OutputPort} instances) by
+	 * overriding this method.
+	 * 
+	 * @param portOwner
+	 *            The owner of the ports.
+	 * @return The {@link OutputPorts} instance, never {@code null}.
+	 * @since 7.3.0
+	 */
+	protected OutputPorts createInnerSources(PortOwner portOwner) {
+		return new OutputPortsImpl(portOwner);
 	}
 
 	/**

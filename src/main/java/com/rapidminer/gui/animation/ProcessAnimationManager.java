@@ -1,24 +1,25 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.gui.animation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,7 @@ public enum ProcessAnimationManager {
 	INSTANCE;
 
 	/** the map from operator name to animation */
-	private final Map<String, Animation> animations = new HashMap<>();
+	private final Map<String, Animation> animations = Collections.synchronizedMap(new HashMap<>());
 
 	/**
 	 * Retrieves the {@link Animation} associated with the operator if it exists.
@@ -79,7 +80,10 @@ public enum ProcessAnimationManager {
 	 * @return whether at least one of the animations need a repaint
 	 */
 	boolean isRepaintRequired() {
-		List<Animation> animationList = new ArrayList<>(animations.values());
+		List<Animation> animationList;
+		synchronized (animations) {
+			animationList = new ArrayList<>(animations.values());
+		}
 		for (Animation animation : animationList) {
 			if (animation.isRedrawRequired()) {
 				return true;

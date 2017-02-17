@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.nio.model;
 
 import java.text.DateFormat;
@@ -38,7 +38,8 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.example.table.DataRow;
 import com.rapidminer.example.table.DataRowFactory;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.operator.OperatorException;
 import com.rapidminer.operator.OperatorVersion;
@@ -46,10 +47,12 @@ import com.rapidminer.operator.UserError;
 import com.rapidminer.operator.nio.ImportWizardUtils;
 import com.rapidminer.operator.nio.model.DataResultSet.ValueType;
 import com.rapidminer.operator.nio.model.ParsingError.ErrorCode;
+import com.rapidminer.parameter.UndefinedParameterError;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.ParameterService;
 import com.rapidminer.tools.ProgressListener;
 import com.rapidminer.tools.container.Pair;
+import com.rapidminer.tools.parameter.internal.DataManagementParameterHelper;
 
 
 /**
@@ -127,28 +130,41 @@ public class DataResultSetTranslator {
 			if (attributeValueType == Ontology.ATTRIBUTE_VALUE) {
 				attributeValueType = Ontology.POLYNOMINAL;
 			}
-			attributes[i] = AttributeFactory.createAttribute(configuration.getColumnMetaData(attributeColumns[i])
-					.getOriginalAttributeName(), attributeValueType);
+			attributes[i] = AttributeFactory.createAttribute(
+					configuration.getColumnMetaData(attributeColumns[i]).getOriginalAttributeName(), attributeValueType);
 		}
 
 		// check whether all columns are accessible
 		int numberOfAvailableColumns = dataResultSet.getNumberOfColumns();
 		for (int attributeColumn : attributeColumns) {
 			if (attributeColumn >= numberOfAvailableColumns) {
-				throw new UserError(null, "data_import.specified_more_columns_than_exist", configuration.getColumnMetaData(
-						attributeColumn).getUserDefinedAttributeName(), attributeColumn);
+				throw new UserError(null, "data_import.specified_more_columns_than_exist",
+						configuration.getColumnMetaData(attributeColumn).getUserDefinedAttributeName(), attributeColumn);
 			}
 		}
 
-		// building example table
-		MemoryExampleTable exampleTable = new MemoryExampleTable(attributes);
-		attributes = exampleTable.getAttributes();
+		// building example set
+		ExampleSetBuilder builder = ExampleSets.from(attributes);
 
 		// now iterate over complete dataResultSet and copy data
 		int currentRow = 0; 		// The row in the underlying DataResultSet
 		int exampleIndex = 0;		// The row in the example set
 		dataResultSet.reset(listener);
-		DataRowFactory factory = new DataRowFactory(configuration.getDataManagementType(), '.');
+
+		int datamanagement = configuration.getDataManagementType();
+		if (Boolean.parseBoolean(ParameterService.getParameterValue(RapidMiner.PROPERTY_RAPIDMINER_UPDATE_BETA_FEATURES))) {
+			datamanagement = DataRowFactory.TYPE_DOUBLE_ARRAY;
+			// TODO: move to DataResultSetTranslationConfiguration if beta mode becomes standard
+			if (operator != null) {
+				try {
+					builder.withOptimizationHint(DataManagementParameterHelper.getSelectedDataManagement(operator));
+				} catch (UndefinedParameterError e) {
+					// use auto mode
+				}
+			}
+		}
+
+		DataRowFactory factory = new DataRowFactory(datamanagement, '.');
 		int maxAnnotatedRow = configuration.getLastAnnotatedRowIndex();
 
 		// detect if this is executed in a process
@@ -224,7 +240,6 @@ public class DataResultSetTranslator {
 			} else {
 				// creating data row
 				DataRow row = factory.create(attributes.length);
-				exampleTable.addDataRow(row);
 				int attributeIndex = 0;
 				for (Attribute attribute : attributes) {
 					// check for missing
@@ -233,38 +248,35 @@ public class DataResultSetTranslator {
 					} else {
 						switch (attribute.getValueType()) {
 							case Ontology.INTEGER:
-								row.set(attribute,
-										getOrParseNumber(configuration, dataResultSet, exampleIndex,
-												attributeColumns[attributeIndex], isFaultTolerant));
+								row.set(attribute, getOrParseNumber(configuration, dataResultSet, exampleIndex,
+										attributeColumns[attributeIndex], isFaultTolerant));
 								break;
 							case Ontology.NUMERICAL:
 							case Ontology.REAL:
-								row.set(attribute,
-										getOrParseNumber(configuration, dataResultSet, exampleIndex,
-												attributeColumns[attributeIndex], isFaultTolerant));
+								row.set(attribute, getOrParseNumber(configuration, dataResultSet, exampleIndex,
+										attributeColumns[attributeIndex], isFaultTolerant));
 								break;
 							case Ontology.DATE_TIME:
 							case Ontology.TIME:
 							case Ontology.DATE:
-								row.set(attribute,
-										getOrParseDate(configuration, dataResultSet, exampleIndex,
-												attributeColumns[attributeIndex], isFaultTolerant));
+								row.set(attribute, getOrParseDate(configuration, dataResultSet, exampleIndex,
+										attributeColumns[attributeIndex], isFaultTolerant));
 								break;
 							default:
-								row.set(attribute,
-										getStringIndex(attribute, dataResultSet, exampleIndex,
-												attributeColumns[attributeIndex], isFaultTolerant));
+								row.set(attribute, getStringIndex(attribute, dataResultSet, exampleIndex,
+										attributeColumns[attributeIndex], isFaultTolerant));
 						}
 					}
 					attributeIndex++;
 				}
+				builder.addDataRow(row);
 				exampleIndex++;
 			}
 			currentRow++;
 		}
 
-		// derive ExampleSet from exampleTable and assigning roles
-		ExampleSet exampleSet = exampleTable.createExampleSet();
+		// derive ExampleSet from builder and assigning roles
+		ExampleSet exampleSet = builder.build();
 		// Copy attribute list to avoid concurrent modification when setting to special
 		List<Attribute> allAttributes = new LinkedList<>();
 		for (Attribute att : exampleSet.getAttributes()) {

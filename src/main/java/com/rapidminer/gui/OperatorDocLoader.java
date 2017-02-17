@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.gui;
 
 import java.io.IOException;
@@ -152,7 +152,7 @@ public class OperatorDocLoader {
 
 		buf.append("</span></h2></td></tr></table><div style=\"border-top: 1px solid #bbbbbb\">");
 		buf.append(OperatorDocToHtmlConverter.getTagHtmlForDescription(descr));
-		
+
 		buf.append("<h4>Synopsis</h4><p>");
 		buf.append(descr.getShortDescription());
 		buf.append("</p></p><br/><h4>Description</h4>");
@@ -167,8 +167,8 @@ public class OperatorDocLoader {
 			}
 			buf.append("<br/>");
 		}
-		appendPortsToDocumentation(displayedOperator.getInputPorts(), "Input", null, buf);
-		appendPortsToDocumentation(displayedOperator.getOutputPorts(), "Output", "outPorts", buf);
+		appendPortsToDocumentation(displayedOperator.getInputPorts(), "Input", buf);
+		appendPortsToDocumentation(displayedOperator.getOutputPorts(), "Output", buf);
 
 		Parameters parameters = displayedOperator.getParameters();
 		if (parameters.getKeys().size() > 0) {
@@ -240,8 +240,7 @@ public class OperatorDocLoader {
 		return "<br/><a href=\"show_example_" + exampleIndex + "\">Show example process</a>.";
 	}
 
-	private static void appendPortsToDocumentation(Ports<? extends Port> ports, String title, String ulClass,
-			StringBuilder buf) {
+	private static void appendPortsToDocumentation(Ports<? extends Port> ports, String title, StringBuilder buf) {
 		if (ports.getNumberOfPorts() > 0) {
 			buf.append("<h4>" + title + "</h4><table border=\"0\" cellspacing=\"0\"><tr><td>");
 			for (Port port : ports.getAllPorts()) {

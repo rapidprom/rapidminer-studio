@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.studio.io.data;
 
 import java.util.Arrays;
@@ -37,7 +37,8 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.example.table.DataRow;
 import com.rapidminer.example.table.DataRowFactory;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.gui.tools.ProgressThread;
 import com.rapidminer.gui.tools.ProgressThreadStoppedException;
 import com.rapidminer.operator.Operator;
@@ -161,11 +162,11 @@ public class DataSetReader {
 		}
 
 		// building example table
-		MemoryExampleTable exampleTable = new MemoryExampleTable(attributes);
-		fillExampleTable(dataSet, listener, attributeColumns, exampleTable);
+		ExampleSetBuilder builder = ExampleSets.from(attributes);
+		fillExampleTable(dataSet, listener, attributeColumns, builder, attributes);
 
 		// derive ExampleSet from exampleTable and assigning roles
-		ExampleSet exampleSet = exampleTable.createExampleSet();
+		ExampleSet exampleSet = builder.build();
 		assignRoles(attributeColumns, exampleSet);
 
 		isReading = false;
@@ -209,8 +210,8 @@ public class DataSetReader {
 	 * Fills the exampleTable with the data from the dataSet.
 	 */
 	private void fillExampleTable(DataSet dataSet, ProgressListener listener, int[] attributeColumns,
-			MemoryExampleTable exampleTable) throws DataSetException, ProcessStoppedException, ParseException {
-		Attribute[] attributes = exampleTable.getAttributes();
+			ExampleSetBuilder builder, Attribute[] attributes)
+			throws DataSetException, ProcessStoppedException, ParseException {
 
 		dataSet.reset();
 		int numberOfRows = dataSet.getNumberOfRows();
@@ -236,7 +237,6 @@ public class DataSetReader {
 
 			// creating data row
 			DataRow row = factory.create(attributes.length);
-			exampleTable.addDataRow(row);
 			int attributeIndex = 0;
 			for (Attribute attribute : attributes) {
 				// check for missing
@@ -260,6 +260,7 @@ public class DataSetReader {
 				}
 				attributeIndex++;
 			}
+			builder.addDataRow(row);
 		}
 	}
 

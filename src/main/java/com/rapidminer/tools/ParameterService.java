@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.tools;
 
 import java.io.BufferedOutputStream;
@@ -61,7 +61,8 @@ import com.rapidminer.tools.parameter.WindowsExeParameterWriter;
  * inside this directory will be loaded.</li>
  * <li>if the property is not set, the environment variable <code>RAPIDMINER_CONFIG_DIR</code> will
  * be evaluated in the same way.</li>
- * <li>the file rapidminer-studio-settings.cfg in the user's .Rapidminer directory will be loaded.</li>
+ * <li>the file rapidminer-studio-settings.cfg in the user's .Rapidminer directory will be
+ * loaded.</li>
  * <li>the file rapidminer-studio-settings.cfg in the user's home directory will be loaded.</li>
  * <li>the file denoted by the System property <code>rapidminer.rcfile</code> will be loaded if
  * defined.</li>
@@ -184,10 +185,8 @@ public class ParameterService {
 		try {
 			informListenerOfChange(key, value);
 		} catch (Throwable e) {
-			LogService.getRoot().log(
-					Level.WARNING,
-					I18N.getMessage(LogService.getRoot().getResourceBundle(),
-							"com.rapidminer.tools.ParameterService.listener_error", e));
+			LogService.getRoot().log(Level.WARNING, I18N.getMessage(LogService.getRoot().getResourceBundle(),
+					"com.rapidminer.tools.ParameterService.listener_error", e));
 		}
 	}
 
@@ -396,25 +395,18 @@ public class ParameterService {
 			out = new BufferedOutputStream(new FileOutputStream(configFile));
 			properties.store(out, "");
 		} catch (FileNotFoundException e) {
-			LogService.getRoot().log(
-					Level.WARNING,
-					I18N.getMessage(LogService.getRoot().getResourceBundle(),
-							"com.rapidminer.tools.ParameterService.writing_user_properties_error", e.getMessage()), e);
+			LogService.getRoot().log(Level.WARNING, I18N.getMessage(LogService.getRoot().getResourceBundle(),
+					"com.rapidminer.tools.ParameterService.writing_user_properties_error", e.getMessage()), e);
 		} catch (IOException e) {
-			LogService.getRoot().log(
-					Level.WARNING,
-					I18N.getMessage(LogService.getRoot().getResourceBundle(),
-							"com.rapidminer.tools.ParameterService.writing_user_properties_error", e.getMessage()), e);
+			LogService.getRoot().log(Level.WARNING, I18N.getMessage(LogService.getRoot().getResourceBundle(),
+					"com.rapidminer.tools.ParameterService.writing_user_properties_error", e.getMessage()), e);
 		} finally {
 			if (out != null) {
 				try {
 					out.close();
 				} catch (IOException e) {
-					LogService.getRoot().log(
-							Level.WARNING,
-							I18N.getMessage(LogService.getRoot().getResourceBundle(),
-									"com.rapidminer.tools.ParameterService.closing_user_properties_file_error",
-									e.getMessage()), e);
+					LogService.getRoot().log(Level.WARNING, I18N.getMessage(LogService.getRoot().getResourceBundle(),
+							"com.rapidminer.tools.ParameterService.closing_user_properties_file_error", e.getMessage()), e);
 				}
 			}
 		}
@@ -518,10 +510,8 @@ public class ParameterService {
 			out = new BufferedOutputStream(new FileOutputStream(file));
 			properties.store(out, "");
 		} catch (IOException e) {
-			LogService.getRoot().log(
-					Level.WARNING,
-					I18N.getMessage(LogService.getRoot().getResourceBundle(),
-							"com.rapidminer.tools.ParameterService.writing_user_properties_error", e.getMessage()), e);
+			LogService.getRoot().log(Level.WARNING, I18N.getMessage(LogService.getRoot().getResourceBundle(),
+					"com.rapidminer.tools.ParameterService.writing_user_properties_error", e.getMessage()), e);
 		} finally {
 			if (out != null) {
 				try {

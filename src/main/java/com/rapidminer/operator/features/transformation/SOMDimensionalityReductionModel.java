@@ -1,41 +1,41 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.features.transformation;
-
-import com.rapidminer.example.Attribute;
-import com.rapidminer.example.AttributeRole;
-import com.rapidminer.example.Example;
-import com.rapidminer.example.ExampleSet;
-import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DataRow;
-import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.MemoryExampleTable;
-import com.rapidminer.operator.AbstractModel;
-import com.rapidminer.operator.OperatorException;
-import com.rapidminer.tools.Ontology;
-import com.rapidminer.tools.math.som.KohonenNet;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import com.rapidminer.example.Attribute;
+import com.rapidminer.example.AttributeRole;
+import com.rapidminer.example.Example;
+import com.rapidminer.example.ExampleSet;
+import com.rapidminer.example.table.AttributeFactory;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
+import com.rapidminer.operator.AbstractModel;
+import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
+import com.rapidminer.tools.Ontology;
+import com.rapidminer.tools.math.som.KohonenNet;
 
 
 /**
@@ -46,6 +46,8 @@ import java.util.Map;
 public class SOMDimensionalityReductionModel extends AbstractModel {
 
 	private static final long serialVersionUID = 7249399167412746295L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 100;
 
 	private KohonenNet net;
 
@@ -86,8 +88,16 @@ public class SOMDimensionalityReductionModel extends AbstractModel {
 			newSpecialAttributes.put(newAttribute, role.getSpecialName());
 		}
 
-		MemoryExampleTable newDataTable = new MemoryExampleTable(attributes);
+		ExampleSetBuilder builder = ExampleSets.from(attributes).withExpectedSize(exampleSet.size());
 		Iterator<Example> iterator = exampleSet.iterator();
+
+		// initialize progress
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
+		}
+		int progressCounter = 0;
 
 		// applying Example on net
 		while (iterator.hasNext()) {
@@ -102,9 +112,12 @@ public class SOMDimensionalityReductionModel extends AbstractModel {
 			while (s.hasNext()) {
 				exampleData[i++] = currentExample.getValue(s.next().getAttribute());
 			}
-			DataRow newRow = new DoubleArrayDataRow(exampleData);
-			newDataTable.addDataRow(newRow);
+			builder.addRow(exampleData);
+
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted(progressCounter);
+			}
 		}
-		return newDataTable.createExampleSet(newSpecialAttributes);
+		return builder.withRoles(newSpecialAttributes).build();
 	}
 }

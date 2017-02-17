@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.features.transformation;
 
 import java.util.ArrayList;
@@ -36,6 +36,7 @@ import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.gui.renderer.models.EigenvectorModelEigenvalueRenderer.EigenvalueTableModel;
 import com.rapidminer.gui.renderer.models.EigenvectorModelEigenvectorRenderer.EigenvectorTableModel;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.UserError;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.Tools;
@@ -58,6 +59,8 @@ import com.rapidminer.tools.Tools;
 public class PCAModel extends AbstractEigenvectorModel implements ComponentWeightsCreatable {
 
 	private static final long serialVersionUID = 5424591594470376525L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 5_000;
 
 	private List<Eigenvector> eigenVectors;
 
@@ -219,6 +222,12 @@ public class PCAModel extends AbstractEigenvectorModel implements ComponentWeigh
 
 		// now iterator through all examples and derive value of new features
 		double[] derivedValues = new double[numberOfUsedComponents];
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
+		}
+		int progressCounter = 0;
 		for (Example example : exampleSet) {
 			// calculate values of new attributes with single scan over attributes
 			d = 0;
@@ -237,6 +246,11 @@ public class PCAModel extends AbstractEigenvectorModel implements ComponentWeigh
 
 			// set values back
 			Arrays.fill(derivedValues, 0);
+
+			// trigger progress
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted(progressCounter);
+			}
 		}
 
 		// now remove attributes if needed
@@ -320,8 +334,8 @@ public class PCAModel extends AbstractEigenvectorModel implements ComponentWeigh
 
 	@Override
 	public String toResultString() {
-		StringBuilder result = new StringBuilder(Tools.getLineSeparator() + "Principal Components:"
-				+ Tools.getLineSeparator());
+		StringBuilder result = new StringBuilder(
+				Tools.getLineSeparator() + "Principal Components:" + Tools.getLineSeparator());
 		if (manualNumber) {
 			result.append("Number of Components: " + numberOfComponents + Tools.getLineSeparator());
 		} else {
@@ -345,8 +359,8 @@ public class PCAModel extends AbstractEigenvectorModel implements ComponentWeigh
 
 	@Override
 	public String toString() {
-		StringBuilder result = new StringBuilder(Tools.getLineSeparator() + "Principal Components:"
-				+ Tools.getLineSeparator());
+		StringBuilder result = new StringBuilder(
+				Tools.getLineSeparator() + "Principal Components:" + Tools.getLineSeparator());
 		if (manualNumber) {
 			result.append("Number of Components: " + numberOfComponents + Tools.getLineSeparator());
 		} else {

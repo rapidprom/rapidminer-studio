@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.preprocessing.filter;
 
 import java.util.ArrayList;
@@ -36,6 +36,7 @@ import com.rapidminer.example.SimpleAttributes;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.example.table.ViewAttribute;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.ProcessStoppedException;
 import com.rapidminer.operator.preprocessing.PreprocessingModel;
 import com.rapidminer.tools.LogService;
@@ -276,8 +277,10 @@ public class NominalToNumericModel extends PreprocessingModel {
 		// initialize progress
 		int progressCompletedCounter = 0;
 		int progressTriggerCounter = 0;
-		if (getOperator() != null) {
-			getOperator().getProgress().setTotal(exampleSet.size());
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
 		}
 
 		// copying values
@@ -288,9 +291,9 @@ public class NominalToNumericModel extends PreprocessingModel {
 					example.setValue(targetAttribute, getValue(targetAttribute, sourceValue));
 
 					// trigger progress
-					if (getOperator() != null && ++progressTriggerCounter > LOOPS_UNTIL_PROGRESS_TRIGGER) {
+					if (progress != null && ++progressTriggerCounter > LOOPS_UNTIL_PROGRESS_TRIGGER) {
 						progressTriggerCounter = 0;
-						getOperator().getProgress().setCompleted(progressCompletedCounter);
+						progress.setCompleted(progressCompletedCounter);
 					}
 				}
 			}
@@ -329,8 +332,10 @@ public class NominalToNumericModel extends PreprocessingModel {
 		int progressCompletedCounter = 0;
 		int workloadForEachLoop = nominalAttributes.size();
 		int progressTriggerCounter = 0;
-		if (getOperator() != null) {
-			getOperator().getProgress().setTotal(exampleSet.size());
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
 		}
 
 		// copying values
@@ -342,9 +347,9 @@ public class NominalToNumericModel extends PreprocessingModel {
 
 			// trigger progress
 			progressCompletedCounter++;
-			if (getOperator() != null && ++progressTriggerCounter * workloadForEachLoop > LOOPS_UNTIL_PROGRESS_TRIGGER) {
+			if (progress != null && ++progressTriggerCounter * workloadForEachLoop > LOOPS_UNTIL_PROGRESS_TRIGGER) {
 				progressTriggerCounter = 0;
-				getOperator().getProgress().setCompleted(progressCompletedCounter);
+				progress.setCompleted(progressCompletedCounter);
 			}
 		}
 

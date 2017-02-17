@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.gui.tools;
 
 import java.awt.GridBagConstraints;
@@ -23,6 +23,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Window;
 import java.net.PasswordAuthentication;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
 import javax.swing.JCheckBox;
@@ -33,6 +34,7 @@ import javax.swing.JTextField;
 
 import com.rapidminer.RapidMiner;
 import com.rapidminer.gui.ApplicationFrame;
+import com.rapidminer.gui.RapidMinerGUI;
 import com.rapidminer.gui.security.UserCredential;
 import com.rapidminer.gui.security.Wallet;
 import com.rapidminer.gui.tools.SwingTools.ResultRunnable;
@@ -48,6 +50,37 @@ import com.rapidminer.tools.PasswordInputCanceledException;
  *
  */
 public class PasswordDialog extends ButtonDialog {
+
+	/**
+	 * Determines if the PasswordDialog should be suppressed
+	 */
+	private static AtomicInteger suppressionCount = new AtomicInteger(0);
+
+	/**
+	 * Checks if a suppression exists
+	 *
+	 * @return true if one or more suppressions exist
+	 */
+	private static boolean isSuppressed() {
+		return suppressionCount.get() > 0;
+	}
+
+	/**
+	 * Prevents the dialog from being shown to the user
+	 * <p>
+	 * Warning: You must remove the suppression from the PasswordDialog after you are done!
+	 * </p>
+	 */
+	public static void addSuppression() {
+		suppressionCount.incrementAndGet();
+	}
+
+	/**
+	 * Removes the suppression from the PasswordDialog, must be called after addSuppression
+	 */
+	public static void removeSuppression() {
+		suppressionCount.decrementAndGet();
+	}
 
 	private static final long serialVersionUID = 1L;
 
@@ -98,7 +131,7 @@ public class PasswordDialog extends ButtonDialog {
 	}
 
 	public static PasswordAuthentication getPasswordAuthentication(String forUrl, boolean forceRefresh)
-	        throws PasswordInputCanceledException {
+			throws PasswordInputCanceledException {
 		return getPasswordAuthentication(forUrl, forceRefresh, false);
 	}
 
@@ -112,8 +145,9 @@ public class PasswordDialog extends ButtonDialog {
 	 *            Will be used when i18nKey is set. If i18nKey is <code>null</code> it will be not
 	 *            be used
 	 **/
+	@SuppressWarnings("deprecation")
 	public static PasswordAuthentication getPasswordAuthentication(String id, String forUrl, boolean forceRefresh,
-	        boolean hideDialogIfPasswordKnown, String i18nKey, Object... args) throws PasswordInputCanceledException {
+			boolean hideDialogIfPasswordKnown, String i18nKey, Object... args) throws PasswordInputCanceledException {
 
 		// First check whether the credentials are stored within the Wallet
 		UserCredential authentication = Wallet.getInstance().getEntry(id, forUrl);
@@ -133,7 +167,16 @@ public class PasswordDialog extends ButtonDialog {
 		// in headless mode
 		if (RapidMiner.getExecutionMode().isHeadless()) {
 			LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.tools.PassworDialog.no_query_password_in_batch_mode",
-			        forUrl);
+					forUrl);
+			return null;
+		}
+		// Throw away all requests before the UI is ready
+		if (!RapidMinerGUI.isInitialized() || !ApplicationFrame.getApplicationFrame().isVisible()) {
+			return null;
+		}
+
+		// If the PasswordDialog is suppressed for reasons don't show it
+		if (PasswordDialog.isSuppressed()) {
 			return null;
 		}
 
@@ -162,7 +205,9 @@ public class PasswordDialog extends ButtonDialog {
 			@Override
 			public PasswordDialog run() {
 				PasswordDialog pd = new PasswordDialog(ApplicationFrame.getApplicationFrame(), passwordI18N,
-		                passwordDialogCredentials, pdArgs);
+						passwordDialogCredentials, pdArgs);
+				// Onboarding is already a APPLICATION_MODAL
+				pd.setModalityType(ModalityType.TOOLKIT_MODAL);
 				pd.setVisible(true);
 				return pd;
 			}
@@ -200,7 +245,7 @@ public class PasswordDialog extends ButtonDialog {
 	}
 
 	public static PasswordAuthentication getPasswordAuthentication(String forUrl, boolean forceRefresh,
-	        boolean hideDialogIfPasswordKnown) throws PasswordInputCanceledException {
+			boolean hideDialogIfPasswordKnown) throws PasswordInputCanceledException {
 		return getPasswordAuthentication(forUrl, forceRefresh, hideDialogIfPasswordKnown, null);
 	}
 
@@ -216,7 +261,7 @@ public class PasswordDialog extends ButtonDialog {
 	 **/
 	@Deprecated
 	public static PasswordAuthentication getPasswordAuthentication(String forUrl, boolean forceRefresh,
-	        boolean hideDialogIfPasswordKnown, String i18nKey, Object... args) throws PasswordInputCanceledException {
+			boolean hideDialogIfPasswordKnown, String i18nKey, Object... args) throws PasswordInputCanceledException {
 		return getPasswordAuthentication(null, forUrl, forceRefresh, hideDialogIfPasswordKnown, null);
 	}
 }

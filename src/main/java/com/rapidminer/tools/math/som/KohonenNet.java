@@ -1,26 +1,27 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.tools.math.som;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
 import com.rapidminer.operator.Operator;
@@ -46,7 +47,7 @@ public class KohonenNet implements Serializable {
 
 	private int trainingSteps = 80;
 
-	private ArrayList<ProgressListener> progressListener = new ArrayList<>();
+	private List<ProgressListener> progressListener = new ArrayList<>();
 
 	private KohonenNode[] nodes;
 
@@ -334,7 +335,9 @@ public class KohonenNet implements Serializable {
 	}
 
 	public void informProgressExit() {
-		Iterator<ProgressListener> iterator = progressListener.iterator();
+		// we need to make a copy of the list, because progressFinsihed
+		// may remove the listener from the progressListener list
+		Iterator<ProgressListener> iterator = new ArrayList<>(progressListener).iterator();
 		while (iterator.hasNext()) {
 			iterator.next().progressFinished();
 		}

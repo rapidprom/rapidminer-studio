@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.gui.flow.processrendering.view.components;
 
 import java.awt.event.KeyEvent;
@@ -88,18 +88,18 @@ public class OperatorWarningHandler implements ProcessEventDecorator {
 			if (operator != null && !operator.getErrorList().isEmpty()) {
 
 				// calculate the bounding box of the warning icon as it is drawn by {@link
-				// ProcessDrawer#renderOperator()} respecting the zoomfactor
+				// ProcessDrawer#renderOperator()}
 				Rectangle2D frame = model.getOperatorRect(operator);
-				double zoomFactor = model.getZoomFactor();
 
-				int iconX = (int) ((frame.getX() + 3 + WARNING_ICON_SIZE) * zoomFactor);
-				int iconY = (int) ((frame.getY() + frame.getHeight() - WARNING_ICON_SIZE - 2) * zoomFactor);
-				int zoomedSize = (int) Math.ceil(WARNING_ICON_SIZE * zoomFactor);
+				int iconX = (int) (frame.getX() + 3 + WARNING_ICON_SIZE);
+				int iconY = (int) (frame.getY() + frame.getHeight() - WARNING_ICON_SIZE - 2);
+				int size = (int) Math.ceil(WARNING_ICON_SIZE);
 
-				Rectangle2D boundingBox = new Rectangle2D.Float(iconX, iconY, zoomedSize, zoomedSize);
+				Rectangle2D boundingBox = new Rectangle2D.Float(iconX, iconY, size, size);
 
 				// check if the user clicked into the bounding box of the warning icon
-				if (boundingBox.contains(e.getPoint())) {
+				if (model.getMousePositionRelativeToProcess() != null
+						&& boundingBox.contains(model.getMousePositionRelativeToProcess())) {
 					showOperatorWarning(operator);
 				}
 			}

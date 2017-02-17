@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.datatable;
 
 import java.util.ArrayList;
@@ -31,8 +31,8 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.Tools;
 import com.rapidminer.example.set.SplittedExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.gui.RapidMinerGUI;
 import com.rapidminer.operator.UserError;
 import com.rapidminer.tools.ObjectVisualizerService;
@@ -303,7 +303,7 @@ public class DataTableExampleSetAdapter extends AbstractDataTable {
 			}
 		}
 
-		MemoryExampleTable exampleTable = new MemoryExampleTable(attributes);
+		ExampleSetBuilder builder = ExampleSets.from(attributes).withExpectedSize(table.getNumberOfRows());
 
 		for (int i = 0; i < table.getNumberOfRows(); i++) {
 			DataTableRow row = table.getRow(i);
@@ -318,10 +318,10 @@ public class DataTableExampleSetAdapter extends AbstractDataTable {
 					values[a] = row.getValue(a);
 				}
 			}
-			exampleTable.addDataRow(new DoubleArrayDataRow(values));
+			builder.addRow(values);
 		}
 
-		return exampleTable.createExampleSet();
+		return builder.build();
 	}
 
 	private void registerVisualizerForMe(Object father) {

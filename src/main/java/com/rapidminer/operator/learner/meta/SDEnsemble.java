@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.meta;
 
 import java.io.BufferedOutputStream;
@@ -35,6 +35,7 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.operator.Model;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.UserError;
 import com.rapidminer.operator.learner.PredictionModel;
 import com.rapidminer.tools.LogService;
@@ -51,6 +52,8 @@ import com.rapidminer.tools.container.Pair;
 public class SDEnsemble extends PredictionModel implements MetaModel {
 
 	private static final long serialVersionUID = 1320495411014477089L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 5000;
 
 	public static final short RULE_COMBINE_ADDITIVE = 1;
 
@@ -97,13 +100,13 @@ public class SDEnsemble extends PredictionModel implements MetaModel {
 	/** @return a <code>String</code> representation of the ruleset. */
 	@Override
 	public String toString() {
-		StringBuffer result = new StringBuffer(super.toString() + Tools.getLineSeparator() + "Number of inner models: "
-				+ this.getNumberOfModels());
+		StringBuffer result = new StringBuffer(
+				super.toString() + Tools.getLineSeparator() + "Number of inner models: " + this.getNumberOfModels());
 		for (int i = 0; i < this.getNumberOfModels(); i++) {
 			Model model = this.getModel(i);
 			result.append((i > 0 ? Tools.getLineSeparator() : "")
-			// + "Weights: " + this.getFactorForModel(i, true) + ","
-			// + this.getFactorForModel(i, false) + " - "
+					// + "Weights: " + this.getFactorForModel(i, true) + ","
+					// + this.getFactorForModel(i, false) + " - "
 					+ "(Embedded model #" + i + "):" + model.toResultString());
 		}
 		return result.toString();
@@ -142,8 +145,8 @@ public class SDEnsemble extends PredictionModel implements MetaModel {
 			}
 		} else if (name.equalsIgnoreCase(MAX_MODEL_NUMBER)) {
 			try {
-					this.maxModelNumber = Integer.parseInt((String) value);
-					return;
+				this.maxModelNumber = Integer.parseInt((String) value);
+				return;
 			} catch (NumberFormatException e) {
 			}
 		} else {
@@ -223,6 +226,14 @@ public class SDEnsemble extends PredictionModel implements MetaModel {
 			}
 		}
 
+		// initialize progress
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(100);
+		}
+		int progressCounter = 0;
+
 		// Prepare an ExampleSet for each model.
 		ExampleSet[] eSet = new ExampleSet[this.getNumberOfModels()];
 
@@ -230,6 +241,9 @@ public class SDEnsemble extends PredictionModel implements MetaModel {
 			Model model = this.getModel(i);
 			eSet[i] = (ExampleSet) exampleSet.clone();
 			eSet[i] = model.apply(eSet[i]);
+			if (progress != null) {
+				progress.setCompleted((int) (50.0 * (i + 1) / this.getNumberOfModels()));
+			}
 		}
 
 		// Prepare one ExampleReader per ExampleSet
@@ -292,6 +306,10 @@ public class SDEnsemble extends PredictionModel implements MetaModel {
 				sumPos = this.getPriorOfClass(posIndex);
 			}
 			example.setPredictedLabel(sumPos);
+
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted((int) (50.0 * progressCounter / exampleSet.size() + 50));
+			}
 		}
 
 		// Closes the file storing the single predictions:

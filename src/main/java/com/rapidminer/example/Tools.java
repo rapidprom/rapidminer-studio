@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.example;
 
 import java.util.HashSet;
@@ -29,8 +29,9 @@ import java.util.Random;
 import com.rapidminer.example.set.AttributeWeightedExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.MemoryExampleTable;
 import com.rapidminer.example.table.NominalMapping;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.generator.FeatureGenerator;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.operator.OperatorCreationException;
@@ -594,7 +595,7 @@ public class Tools {
 			}
 		}
 
-		MemoryExampleTable table = new MemoryExampleTable(attributes);
+		ExampleSetBuilder builder = ExampleSets.from(attributes);
 		int maxSize = exampleSet.size();
 		for (int i = offset; i < offset + size && i < maxSize; i++) {
 			Example example = exampleSet.getExample(i);
@@ -604,18 +605,18 @@ public class Tools {
 			while (allI.hasNext()) {
 				dataRow[counter++] = example.getValue(allI.next());
 			}
-			table.addDataRow(new DoubleArrayDataRow(dataRow));
+			builder.addDataRow(new DoubleArrayDataRow(dataRow));
 		}
 
-		return table.createExampleSet(specialMap);
+		return builder.withRoles(specialMap).build();
 	}
 
 	/**
 	 * Returns a new example set based on a fresh memory example table sampled from the given set.
 	 */
 	public static ExampleSet getShuffledSubsetCopy(ExampleSet exampleSet, int size, RandomGenerator randomGenerator) {
-		int[] selectedIndices = OrderedSamplingWithoutReplacement
-				.getSampledIndices(randomGenerator, exampleSet.size(), size);
+		int[] selectedIndices = OrderedSamplingWithoutReplacement.getSampledIndices(randomGenerator, exampleSet.size(),
+				size);
 		Map<Attribute, String> specialMap = new LinkedHashMap<>();
 		List<Attribute> attributes = new LinkedList<>();
 		Iterator<AttributeRole> a = exampleSet.getAttributes().allAttributeRoles();
@@ -628,7 +629,7 @@ public class Tools {
 			}
 		}
 
-		MemoryExampleTable table = new MemoryExampleTable(attributes);
+		ExampleSetBuilder builder = ExampleSets.from(attributes).withExpectedSize(selectedIndices.length);
 
 		for (int i = 0; i < selectedIndices.length; i++) {
 			Example example = exampleSet.getExample(selectedIndices[i]);
@@ -638,10 +639,10 @@ public class Tools {
 			while (allI.hasNext()) {
 				dataRow[counter++] = example.getValue(allI.next());
 			}
-			table.addDataRow(new DoubleArrayDataRow(dataRow));
+			builder.addRow(dataRow);
 		}
 
-		return table.createExampleSet(specialMap);
+		return builder.withRoles(specialMap).build();
 	}
 
 	/**

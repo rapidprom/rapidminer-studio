@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator;
 
 import java.io.File;
@@ -320,6 +320,9 @@ public abstract class Operator extends AbstractObservable<Operator>
 		this.operatorDescription = description;
 		this.parameters = null;
 		this.name = operatorDescription.getOperatorDocumentation().getShortName();
+
+		inputPorts = createInputPorts(portOwner);
+		outputPorts = createOutputPorts(portOwner);
 		inputPorts.addObserver(delegatingPortObserver, false);
 		outputPorts.addObserver(delegatingPortObserver, false);
 		makeDirtyOnUpdate(inputPorts);
@@ -1003,7 +1006,7 @@ public abstract class Operator extends AbstractObservable<Operator>
 				getLogger().fine("Completed application " + applyCount.get() + " of operator " + getName());
 			} catch (ProcessStoppedRuntimeException e) {
 				// Convert unchecked exception to checked exception (unchecked exception might be
-				// thrown from within thread pools).
+				// thrown from places where no checked exceptions are possible, e.g. thread pools).
 				throw new ProcessStoppedException(this);
 			} catch (UserError e) {
 				// TODO: ensuring that operator is removed if it abnormally terminates but is not
@@ -2052,12 +2055,13 @@ public abstract class Operator extends AbstractObservable<Operator>
 		}
 	};
 
-	private final InputPorts inputPorts = new InputPortsImpl(portOwner);
-	private final OutputPorts outputPorts = new OutputPortsImpl(portOwner);
+	private final InputPorts inputPorts;
+	private final OutputPorts outputPorts;
 	private final MDTransformer transformer = new MDTransformer(this);
 	private final Observer<Port> delegatingPortObserver = new DelegatingObserver<>(this, this);
 	private final Observer<String> delegatingParameterObserver = new DelegatingObserver<>(this, this);
 	/** Sets the dirty flag on any update. */
+	@SuppressWarnings("rawtypes")
 	private final Observer dirtyObserver = new Observer<Object>() {
 
 		@Override
@@ -2096,6 +2100,34 @@ public abstract class Operator extends AbstractObservable<Operator>
 	 */
 	public final OutputPorts getOutputPorts() {
 		return outputPorts;
+	}
+
+	/**
+	 * This method returns an {@link InputPorts} object for port initialization. Useful for adding
+	 * an arbitrary implementation (e.g. changing port creation & (dis)connection behavior,
+	 * optionally by customized {@link InputPort} instances) by overriding this method.
+	 *
+	 * @param portOwner
+	 *            The owner of the ports.
+	 * @return The {@link InputPorts} instance, never {@code null}.
+	 * @since 7.3.0
+	 */
+	protected InputPorts createInputPorts(PortOwner portOwner) {
+		return new InputPortsImpl(portOwner);
+	}
+
+	/**
+	 * This method returns an {@link OutputPorts} object for port initialization. Useful for adding
+	 * an arbitrary implementation (e.g. changing port creation & (dis)connection behavior,
+	 * optionally by customized {@link OutputPort} instances) by overriding this method.
+	 *
+	 * @param portOwner
+	 *            The owner of the ports.
+	 * @return The {@link OutputPorts} instance, never {@code null}.
+	 * @since 7.3.0
+	 */
+	protected OutputPorts createOutputPorts(PortOwner portOwner) {
+		return new OutputPortsImpl(portOwner);
 	}
 
 	/**
@@ -2294,6 +2326,7 @@ public abstract class Operator extends AbstractObservable<Operator>
 	 * Returns true if this operator contains at least one {@link OutputPort} provided that its
 	 * input ports are satisfied.
 	 */
+	@SuppressWarnings("deprecation")
 	public boolean producesOutput(Class<? extends IOObject> outputClass) {
 		assumePreconditionsSatisfied();
 		transformMetaData();

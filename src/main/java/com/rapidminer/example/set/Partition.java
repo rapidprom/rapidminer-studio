@@ -1,37 +1,34 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.example.set;
 
-import com.rapidminer.tools.LogService;
-
 import java.io.Serializable;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.logging.Level;
+
+import com.rapidminer.tools.LogService;
 
 
 /**
  * Implements a partition. A partition is used to divide an example set into different parts of
  * arbitrary sizes without actually make a copy of the data. Partitions are used by
  * {@link SplittedExampleSet}s. Partition numbering starts at 0.
- * 
+ *
  * @author Simon Fischer, Ingo Mierswa
  */
 public class Partition implements Cloneable, Serializable {
@@ -79,6 +76,36 @@ public class Partition implements Cloneable, Serializable {
 	/** Creates a partition from the given one. Partition numbering starts at 0. */
 	public Partition(int[] elements, int numberOfPartitions) {
 		init(elements, numberOfPartitions);
+	}
+
+	/**
+	 * Creates a partition with one hidden partition that arises from composing two Partitions.
+	 * Works analogously to {@link #init(int[], int)} but does not select the hidden partition.
+	 *
+	 * @param numberOfNonHiddenPartitions
+	 *            the number of partitions without counting the hidden one
+	 * @param newElements
+	 *            map from index to the associated partition index including map to the hidden
+	 *            partition index
+	 */
+	private Partition(int numberOfNonHiddenPartitions, int[] newElements) {
+		partitionSizes = new int[numberOfNonHiddenPartitions];
+		lastElementIndex = new int[numberOfNonHiddenPartitions];
+		elements = newElements;
+		for (int i = 0; i < elements.length; i++) {
+			if (elements[i] >= 0 && elements[i] < numberOfNonHiddenPartitions) {
+				partitionSizes[elements[i]]++;
+				lastElementIndex[elements[i]] = i;
+			}
+		}
+
+		// select all partitions except the hidden one
+		mask = new boolean[numberOfNonHiddenPartitions + 1];
+		for (int i = 0; i < numberOfNonHiddenPartitions; i++) {
+			mask[i] = true;
+		}
+
+		recalculateTableIndices();
 	}
 
 	/** Clone constructor. */
@@ -251,17 +278,20 @@ public class Partition implements Cloneable, Serializable {
 	 * Recalculates the example table indices of the currently selected examples.
 	 */
 	private void recalculateTableIndices() {
-		List<Integer> indices = new LinkedList<Integer>();
+		int length = 0;
 		for (int i = 0; i < elements.length; i++) {
 			if (mask[elements[i]]) {
-				indices.add(i);
+				length++;
 			}
 		}
-		tableIndexMap = new int[indices.size()];
-		Iterator<Integer> i = indices.iterator();
-		int counter = 0;
-		while (i.hasNext()) {
-			tableIndexMap[counter++] = i.next();
+
+		tableIndexMap = new int[length];
+		int j = 0;
+		for (int i = 0; i < elements.length; i++) {
+			if (mask[elements[i]]) {
+				tableIndexMap[j] = i;
+				j++;
+			}
 		}
 	}
 
@@ -285,5 +315,35 @@ public class Partition implements Cloneable, Serializable {
 	@Override
 	public Object clone() {
 		return new Partition(this);
+	}
+
+	/**
+	 * Composes the parentPartition with the childPartition. The childPartition is applied to the
+	 * selected subsets of the parentPartition. The non-selected subsets of the parentPartition
+	 * cannot be reached and are hidden.
+	 *
+	 * @param parentPartition
+	 *            the outer partition to which the childPartition is applied
+	 * @param childPartition
+	 *            the inner partition that should be applied to the parentPartition
+	 * @return a composed partition that yields the same result a first applying the parentPartition
+	 *         and then the childPartition
+	 */
+	static Partition compose(Partition parentPartition, Partition childPartition) {
+		int numberOfElements = parentPartition.elements.length;
+		int[] newElements = new int[numberOfElements];
+		int numberOfNonHiddenPartitions = childPartition.getNumberOfSubsets();
+		// the non-reachable partition of the parentPartition are mapped to the additionalIndex
+		// which is one bigger than the last childPartition index
+		int additionalIndex = numberOfNonHiddenPartitions;
+		int indexInChild = 0;
+		for (int i = 0; i < numberOfElements; i++) {
+			if (parentPartition.isSelected(i) && indexInChild < childPartition.elements.length) {
+				newElements[i] = childPartition.elements[indexInChild++];
+			} else {
+				newElements[i] = additionalIndex;
+			}
+		}
+		return new Partition(numberOfNonHiddenPartitions, newElements);
 	}
 }

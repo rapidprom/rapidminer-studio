@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.meta;
 
 import java.util.Iterator;
@@ -41,7 +41,6 @@ import com.rapidminer.parameter.ParameterType;
 import com.rapidminer.parameter.ParameterTypeBoolean;
 import com.rapidminer.parameter.ParameterTypeDouble;
 import com.rapidminer.parameter.ParameterTypeInt;
-import com.rapidminer.parameter.UndefinedParameterError;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.RandomGenerator;
 import com.rapidminer.tools.math.RunVector;
@@ -53,7 +52,8 @@ import com.rapidminer.tools.math.RunVector;
  * <li>target label is always boolean</li>
  * <li>goal is to fit a crisp ensemble classifier (use_distribution always off)</li>
  * <li>base classifier weights are always adapted by a single row from first to last</li>
- * <li>no internal bootstrapping</li> </ul>
+ * <li>no internal bootstrapping</li>
+ * </ul>
  *
  * @author Martin Scholz
  *
@@ -132,6 +132,8 @@ public class BayBoostStream extends AbstractMetaLearner {
 
 	// Backup of the original weights
 	private double[] oldWeights;
+
+	private int batchSize;
 
 	/** Constructor. */
 	public BayBoostStream(OperatorDescription description) {
@@ -233,7 +235,8 @@ public class BayBoostStream extends AbstractMetaLearner {
 						STREAM_CONTROL_ATTRIB_NAME, Ontology.INTEGER);
 			} else {
 				streamControlAttribute = attr;
-				logWarning("Attribute with the (reserved) name of the stream control attribute exists. It is probably an old version created by this operator. Trying to recycle it... ");
+				logWarning(
+						"Attribute with the (reserved) name of the stream control attribute exists. It is probably an old version created by this operator. Trying to recycle it... ");
 				// Resetting the stream control attribute values by overwriting
 				// them with 0 avoids (unlikely)
 				// problems in case the same ExampleSet is passed to this
@@ -253,13 +256,16 @@ public class BayBoostStream extends AbstractMetaLearner {
 		boolean estimateFavoursExtBatch = true;
 		// *** The main loop, one iteration per batch: ***
 		Iterator<Example> reader = exampleSet.iterator();
+		final double holdOutRatio = this.getParameterAsDouble(PARAMETER_FRACTION_HOLD_OUT_SET);
+		batchSize = this.getParameterAsInt(PARAMETER_BATCH_SIZE);
+		boolean rescaleLabelPriors = this.getParameterAsBoolean(PARAMETER_RESCALE_LABEL_PRIORS);
 		while (reader.hasNext()) {
 			// increment batch number, collect batch and evaluate performance of
 			// current model on batch
 			double[] classPriors = this.prepareBatch(++this.currentIteration, reader, streamControlAttribute);
 
-			ConditionedExampleSet trainingSet = new ConditionedExampleSet(exampleSet, new BatchFilterCondition(
-					streamControlAttribute, this.currentIteration));
+			ConditionedExampleSet trainingSet = new ConditionedExampleSet(exampleSet,
+					new BatchFilterCondition(streamControlAttribute, this.currentIteration));
 
 			final EstimatedPerformance estPerf;
 
@@ -313,7 +319,7 @@ public class BayBoostStream extends AbstractMetaLearner {
 
 			// *** retraining phase ***
 			// Step 2: First reconstruct the initial weighting, if necessary.
-			if (this.getParameterAsBoolean(PARAMETER_RESCALE_LABEL_PRIORS) == true) {
+			if (rescaleLabelPriors == true) {
 				this.rescalePriors(trainingSet, classPriors);
 			}
 
@@ -330,7 +336,6 @@ public class BayBoostStream extends AbstractMetaLearner {
 				}
 
 				// separate hold out set
-				final double holdOutRatio = this.getParameterAsDouble(PARAMETER_FRACTION_HOLD_OUT_SET);
 				Vector<Example> holdOutExamples = new Vector<Example>();
 				if (holdOutRatio > 0) {
 					RandomGenerator random = RandomGenerator.getRandomGenerator(this);
@@ -362,9 +367,10 @@ public class BayBoostStream extends AbstractMetaLearner {
 				ExampleSet extendedBatch = // because of the ">=" condition it
 						// is sufficient to remember the
 						// opening batch
-						new ConditionedExampleSet(exampleSet, new BatchFilterCondition(streamControlAttribute, firstOpenBatch));
+						new ConditionedExampleSet(exampleSet,
+								new BatchFilterCondition(streamControlAttribute, firstOpenBatch));
 				classPriors = this.prepareExtendedBatch(extendedBatch);
-				if (this.getParameterAsBoolean(PARAMETER_RESCALE_LABEL_PRIORS) == true) {
+				if (rescaleLabelPriors == true) {
 					this.rescalePriors(extendedBatch, classPriors);
 				}
 				modelInfo2.remove(modelInfo2.size() - 1);
@@ -384,9 +390,9 @@ public class BayBoostStream extends AbstractMetaLearner {
 				}
 
 				if (holdOutRatio > 0) {
-					Iterator hoEit = holdOutExamples.iterator();
+					Iterator<Example> hoEit = holdOutExamples.iterator();
 					while (hoEit.hasNext()) {
-						((Example) hoEit.next()).setValue(streamControlAttribute, this.currentIteration);
+						hoEit.next().setValue(streamControlAttribute, this.currentIteration);
 					}
 					// TODO: create new example set
 					// trainingSet.updateCondition();
@@ -396,7 +402,7 @@ public class BayBoostStream extends AbstractMetaLearner {
 						hoEit = holdOutExamples.iterator();
 						int errors = 0;
 						while (hoEit.hasNext()) {
-							Example example = (Example) hoEit.next();
+							Example example = hoEit.next();
 							if (example.getPredictedLabel() != example.getLabel()) {
 								errors++;
 							}
@@ -407,7 +413,7 @@ public class BayBoostStream extends AbstractMetaLearner {
 						hoEit = holdOutExamples.iterator();
 						errors = 0;
 						while (hoEit.hasNext()) {
-							Example example = (Example) hoEit.next();
+							Example example = hoEit.next();
 							if (example.getPredictedLabel() != example.getLabel()) {
 								errors++;
 							}
@@ -436,7 +442,7 @@ public class BayBoostStream extends AbstractMetaLearner {
 		return ensembleExtBatch == null ? ensembleNewBatch : ensembleExtBatch;
 	}
 
-	private BayBoostModel retrainLastWeight(BayBoostModel ensemble, ExampleSet exampleSet, Vector holdOutSet)
+	private BayBoostModel retrainLastWeight(BayBoostModel ensemble, ExampleSet exampleSet, Vector<Example> holdOutSet)
 			throws OperatorException {
 		this.prepareExtendedBatch(exampleSet); // method fits by chance
 		int modelNum = ensemble.getNumberOfModels();
@@ -454,10 +460,10 @@ public class BayBoostStream extends AbstractMetaLearner {
 
 		// quite ugly:
 		double[] weights = new double[holdOutSet.size()];
-		Iterator it = holdOutSet.iterator();
+		Iterator<Example> it = holdOutSet.iterator();
 		int index = 0;
 		while (it.hasNext()) {
-			Example example = (Example) it.next();
+			Example example = it.next();
 			weights[index++] = example.getWeight();
 		}
 		Iterator<Example> reader = exampleSet.iterator();
@@ -467,7 +473,7 @@ public class BayBoostStream extends AbstractMetaLearner {
 		it = holdOutSet.iterator();
 		index = 0;
 		while (it.hasNext()) {
-			Example example = (Example) it.next();
+			Example example = it.next();
 			example.setWeight(weights[index++]);
 		}
 
@@ -512,7 +518,7 @@ public class BayBoostStream extends AbstractMetaLearner {
 	 */
 	private Model trainBaseModel(ExampleSet exampleSet) throws OperatorException {
 		Model model = applyInnerLearner(exampleSet);
-		createOrReplacePredictedLabelFor(exampleSet, model);
+		createOrReplacePredictedLabelFor(exampleSet);
 		return model;
 	}
 
@@ -529,9 +535,7 @@ public class BayBoostStream extends AbstractMetaLearner {
 	 *            the attribute to write the batch number to
 	 * @return the class priors of the batch
 	 */
-	private double[] prepareBatch(int currentBatchNum, Iterator<Example> reader, Attribute batchAttribute)
-			throws UndefinedParameterError {
-		final int batchSize = this.getParameterAsInt(PARAMETER_BATCH_SIZE);
+	private double[] prepareBatch(int currentBatchNum, Iterator<Example> reader, Attribute batchAttribute) {
 		int batchCount = 0;
 		// Read and classify examples from stream, as long as the buffer (next
 		// batch)
@@ -631,12 +635,12 @@ public class BayBoostStream extends AbstractMetaLearner {
 			ContingencyMatrix cm = consideredModelInfo.getContingencyMatrix();
 			// double[][] oldBiasMatrix = (double[][]) consideredModelInfo[1];
 
-			BayBoostStream.createOrReplacePredictedLabelFor(exampleSet, consideredModel);
+			BayBoostStream.createOrReplacePredictedLabelFor(exampleSet);
 			exampleSet = consideredModel.apply(exampleSet);
 			if (exampleSet.getAttributes().getPredictedLabel().isNominal() == false) {
 				// Only the case of nominal base classifiers is supported!
-				throw new UserError(this, 101, new Object[] { exampleSet.getAttributes().getLabel(),
-				"BayBoostStream base learners" });
+				throw new UserError(this, 101,
+						new Object[] { exampleSet.getAttributes().getLabel(), "BayBoostStream base learners" });
 			}
 
 			WeightedPerformanceMeasures wp = new WeightedPerformanceMeasures(exampleSet);
@@ -695,14 +699,12 @@ public class BayBoostStream extends AbstractMetaLearner {
 	 * Helper method replacing <code>Model.createPredictedLabel(ExampleSet)</code> in order to lower
 	 * memory consumption.
 	 */
-	private static void createOrReplacePredictedLabelFor(ExampleSet exampleSet, Model model) {
+	private static void createOrReplacePredictedLabelFor(ExampleSet exampleSet) {
 		Attribute predictedLabel = exampleSet.getAttributes().getPredictedLabel();
 		if (predictedLabel != null) { // remove old predicted label
 			exampleSet.getAttributes().remove(predictedLabel);
 			exampleSet.getExampleTable().removeAttribute(predictedLabel);
 		}
-		// model.createPredictedLabel(exampleSet); // not longer necessary since
-		// label creation is done by model.apply(...).
 	}
 
 	/**
@@ -712,7 +714,8 @@ public class BayBoostStream extends AbstractMetaLearner {
 	public List<ParameterType> getParameterTypes() {
 		List<ParameterType> types = super.getParameterTypes();
 		types.add(new ParameterTypeBoolean(PARAMETER_RESCALE_LABEL_PRIORS,
-				"Specifies whether the proportion of labels should be equal by construction after first iteration .", false));
+				"Specifies whether the proportion of labels should be equal by construction after first iteration .",
+				false));
 		types.add(new ParameterTypeInt(PARAMETER_BATCH_SIZE,
 				"Size of the batches. Minimum number of examples used to train a model.", 1, Integer.MAX_VALUE, 100));
 		types.add(new ParameterTypeDouble(PARAMETER_FRACTION_HOLD_OUT_SET,

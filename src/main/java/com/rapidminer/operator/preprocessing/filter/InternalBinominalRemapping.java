@@ -1,26 +1,28 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.preprocessing.filter;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.commons.lang.ArrayUtils;
 
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.Example;
@@ -28,6 +30,7 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.BinominalMapping;
 import com.rapidminer.operator.OperatorDescription;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorVersion;
 import com.rapidminer.operator.annotation.ResourceConsumptionEstimator;
 import com.rapidminer.operator.preprocessing.AbstractDataProcessing;
 import com.rapidminer.operator.tools.AttributeSubsetSelector;
@@ -62,7 +65,13 @@ public class InternalBinominalRemapping extends AbstractDataProcessing {
 	/** The parameter name for &quot;The second/positive/true value.&quot; */
 	public static final String PARAMETER_POSITIVE_VALUE = "positive_value";
 
-	private AttributeSubsetSelector attributeSelector = new AttributeSubsetSelector(this, getInputPort(), Ontology.BINOMINAL);
+	/**
+	 * Incompatible version, old version writes into the example set.
+	 */
+	private static final OperatorVersion VERSION_MAY_WRITE_INTO_DATA = new OperatorVersion(7, 3, 0);
+
+	private AttributeSubsetSelector attributeSelector = new AttributeSubsetSelector(this, getInputPort(),
+			Ontology.BINOMINAL);
 
 	public InternalBinominalRemapping(OperatorDescription description) {
 		super(description);
@@ -78,17 +87,19 @@ public class InternalBinominalRemapping extends AbstractDataProcessing {
 		Set<Attribute> remappedAttributes = new HashSet<>();
 
 		for (Attribute attribute : attributes) {
-			if (negativeValue.equals(attribute.getMapping().getPositiveString())
-					&& positiveValue.equals(attribute.getMapping().getNegativeString())) {
-				// create inverse value mapping
-				attribute.getMapping().clear();
-				attribute.getMapping().mapString(negativeValue);
-				attribute.getMapping().mapString(positiveValue);
-				remappedAttributes.add(attribute);
-			} else if (!negativeValue.equals(attribute.getMapping().getNegativeString())
-					|| !positiveValue.equals(attribute.getMapping().getPositiveString())) {
-				logWarning("specified values do not match values of attribute " + attribute.getName()
-						+ ", attribute is skipped.");
+			if (attribute.isNominal()) {
+				if (negativeValue.equals(attribute.getMapping().getPositiveString())
+						&& positiveValue.equals(attribute.getMapping().getNegativeString())) {
+					// create inverse value mapping
+					attribute.getMapping().clear();
+					attribute.getMapping().mapString(negativeValue);
+					attribute.getMapping().mapString(positiveValue);
+					remappedAttributes.add(attribute);
+				} else if (!negativeValue.equals(attribute.getMapping().getNegativeString())
+						|| !positiveValue.equals(attribute.getMapping().getPositiveString())) {
+					logWarning("specified values do not match values of attribute " + attribute.getName()
+							+ ", attribute is skipped.");
+				}
 			}
 		}
 
@@ -121,7 +132,13 @@ public class InternalBinominalRemapping extends AbstractDataProcessing {
 
 	@Override
 	public boolean writesIntoExistingData() {
-		return false;
+		return getCompatibilityLevel().isAbove(VERSION_MAY_WRITE_INTO_DATA);
+	}
+
+	@Override
+	public OperatorVersion[] getIncompatibleVersionChanges() {
+		return (OperatorVersion[]) ArrayUtils.addAll(super.getIncompatibleVersionChanges(),
+				new OperatorVersion[] { VERSION_MAY_WRITE_INTO_DATA });
 	}
 
 	@Override

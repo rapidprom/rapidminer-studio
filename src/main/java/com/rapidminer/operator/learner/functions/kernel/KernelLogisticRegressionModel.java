@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.functions.kernel;
 
 import java.util.Iterator;
@@ -25,6 +25,8 @@ import com.rapidminer.example.Attribute;
 import com.rapidminer.example.Example;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.set.ExampleSetUtilities;
+import com.rapidminer.operator.OperatorProgress;
+import com.rapidminer.operator.ProcessStoppedException;
 import com.rapidminer.tools.math.kernels.Kernel;
 
 
@@ -36,6 +38,8 @@ import com.rapidminer.tools.math.kernels.Kernel;
 public class KernelLogisticRegressionModel extends KernelModel {
 
 	private static final long serialVersionUID = 2848059541066828127L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 2000;
 
 	/** The used kernel function. */
 	private Kernel kernel;
@@ -125,10 +129,20 @@ public class KernelLogisticRegressionModel extends KernelModel {
 		return bias + kernel.getSum(supportVectors, values);
 	}
 
-	/** Applies the model to each example of the example set. */
+	/**
+	 * Applies the model to each example of the example set.
+	 * 
+	 * @throws ProcessStoppedException
+	 */
 	@Override
-	public ExampleSet performPrediction(ExampleSet exampleSet, Attribute predLabel) {
+	public ExampleSet performPrediction(ExampleSet exampleSet, Attribute predLabel) throws ProcessStoppedException {
 		Iterator<Example> reader = exampleSet.iterator();
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
+		}
+		int progressCounter = 0;
 		while (reader.hasNext()) {
 			Example current = reader.next();
 			double[] currentX = new double[exampleSet.getAttributes().size()];
@@ -139,8 +153,8 @@ public class KernelLogisticRegressionModel extends KernelModel {
 			double sum = bias + kernel.getSum(supportVectors, currentX);
 			if (getLabel().isNominal()) {
 				double probPos = 1.0d / (1.0d + Math.exp(-sum));
-				int index = probPos > 0.5d ? getLabel().getMapping().getPositiveIndex() : getLabel().getMapping()
-						.getNegativeIndex();
+				int index = probPos > 0.5d ? getLabel().getMapping().getPositiveIndex()
+						: getLabel().getMapping().getNegativeIndex();
 				current.setValue(predLabel, index);
 				current.setConfidence(predLabel.getMapping().getPositiveString(), probPos);
 				current.setConfidence(predLabel.getMapping().getNegativeString(), 1.0d - probPos);
@@ -152,6 +166,9 @@ public class KernelLogisticRegressionModel extends KernelModel {
 				 */
 			} else {
 				current.setValue(predLabel, sum);
+			}
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted(progressCounter);
 			}
 		}
 		return exampleSet;

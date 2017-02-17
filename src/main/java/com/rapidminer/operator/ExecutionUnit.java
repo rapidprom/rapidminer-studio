@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator;
 
 import java.security.AccessController;
@@ -50,8 +50,6 @@ import com.rapidminer.operator.ports.OutputPorts;
 import com.rapidminer.operator.ports.Port;
 import com.rapidminer.operator.ports.PortException;
 import com.rapidminer.operator.ports.PortOwner;
-import com.rapidminer.operator.ports.impl.InputPortsImpl;
-import com.rapidminer.operator.ports.impl.OutputPortsImpl;
 import com.rapidminer.operator.ports.metadata.CompatibilityLevel;
 import com.rapidminer.operator.ports.metadata.OperatorLoopError;
 import com.rapidminer.tools.AbstractObservable;
@@ -97,8 +95,8 @@ public class ExecutionUnit extends AbstractObservable<ExecutionUnit> {
 	private String name;
 	private final OperatorChain enclosingOperator;
 
-	private final InputPorts innerInputPorts = new InputPortsImpl(portOwner);
-	private final OutputPorts innerOutputPorts = new OutputPortsImpl(portOwner);
+	private final InputPorts innerInputPorts;
+	private final OutputPorts innerOutputPorts;
 	private Vector<Operator> operators = new Vector<Operator>();
 	private Vector<Operator> executionOrder;
 
@@ -118,6 +116,9 @@ public class ExecutionUnit extends AbstractObservable<ExecutionUnit> {
 
 	public ExecutionUnit(OperatorChain enclosingOperator, String name) {
 		this.name = name;
+
+		innerInputPorts = enclosingOperator.createInnerSinks(portOwner);
+		innerOutputPorts = enclosingOperator.createInnerSources(portOwner);
 		this.enclosingOperator = enclosingOperator;
 		innerInputPorts.addObserver(delegatingPortObserver, false);
 		innerOutputPorts.addObserver(delegatingPortObserver, false);
@@ -813,10 +814,16 @@ public class ExecutionUnit extends AbstractObservable<ExecutionUnit> {
 				}
 			});
 		} catch (PrivilegedActionException e) {
-			// e.getException() should be an instance of OperatorException,
+			// e.getException() can either be an instance of OperatorException,
+			// or an unsafe Exception,
 			// as only checked exceptions will be wrapped in a
 			// PrivilegedActionException.
-			throw (OperatorException) e.getException();
+			if (e.getException() instanceof OperatorException) {
+				throw (OperatorException) e.getException();
+			} else {
+				// Wrap unsafe Exceptions
+				throw new OperatorException(e.getException().getMessage(), e.getException());
+			}
 		}
 	}
 

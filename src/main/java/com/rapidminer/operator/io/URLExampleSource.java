@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.io;
 
 import java.io.BufferedReader;
@@ -30,8 +30,8 @@ import java.util.regex.Pattern;
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.operator.OperatorCreationException;
 import com.rapidminer.operator.OperatorDescription;
 import com.rapidminer.operator.OperatorException;
@@ -95,7 +95,7 @@ public class URLExampleSource extends AbstractExampleSource {
 		boolean skipErrorLines = getParameterAsBoolean(PARAMETER_SKIP_ERROR_LINES);
 		char decimalPointCharacter = getParameterAsString(PARAMETER_DECIMAL_POINT_CHARACTER).charAt(0);
 
-		MemoryExampleTable table = null;
+		ExampleSetBuilder builder = null;
 		BufferedReader in = null;
 		try {
 			InputStream inputStream = getParameterAsInputStream(PARAMETER_URL);
@@ -134,7 +134,7 @@ public class URLExampleSource extends AbstractExampleSource {
 
 				// create table for first line
 				boolean skipLine = false;
-				if (table == null) {
+				if (builder == null) {
 					int attCounter = 1;
 					for (String r : row) {
 						if (readAttributeNames) {
@@ -144,7 +144,7 @@ public class URLExampleSource extends AbstractExampleSource {
 						}
 						attCounter++;
 					}
-					table = new MemoryExampleTable(attributes);
+					builder = ExampleSets.from(attributes);
 
 					if (readAttributeNames) {
 						skipLine = true;
@@ -157,7 +157,7 @@ public class URLExampleSource extends AbstractExampleSource {
 					for (int i = 0; i < data.length; i++) {
 						data[i] = attributes.get(i).getMapping().mapString(row[i]);
 					}
-					table.addDataRow(new DoubleArrayDataRow(data));
+					builder.addRow(data);
 				}
 				lineCounter++;
 			}
@@ -174,7 +174,7 @@ public class URLExampleSource extends AbstractExampleSource {
 			}
 		}
 
-		ExampleSet exampleSet = table.createExampleSet();
+		ExampleSet exampleSet = builder.build();
 
 		try {
 			GuessValueTypes guessValuesTypes = OperatorService.createOperator(GuessValueTypes.class);

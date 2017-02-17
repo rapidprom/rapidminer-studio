@@ -1,32 +1,40 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.associations;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import com.rapidminer.RapidMiner;
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.example.table.DataRow;
 import com.rapidminer.example.table.DataRowFactory;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.operator.OperatorDescription;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.generator.ExampleSetGenerator;
 import com.rapidminer.operator.ports.InputPort;
 import com.rapidminer.operator.ports.OutputPort;
 import com.rapidminer.operator.ports.metadata.AttributeMetaData;
@@ -35,24 +43,20 @@ import com.rapidminer.operator.ports.metadata.GenerateNewExampleSetMDRule;
 import com.rapidminer.operator.ports.metadata.MetaData;
 import com.rapidminer.parameter.ParameterType;
 import com.rapidminer.parameter.ParameterTypeBoolean;
-import com.rapidminer.parameter.ParameterTypeCategory;
 import com.rapidminer.tools.Ontology;
+import com.rapidminer.tools.ParameterService;
 import com.rapidminer.tools.math.container.Range;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import com.rapidminer.tools.parameter.internal.DataManagementParameterHelper;
 
 
 /**
- * 
+ *
  * @author Tobias Malbrecht
  */
 public class FrequentItemSetsToData extends Operator {
 
 	public static final String PARAMETER_GENERATE_ITEM_SET_INDICATORS = "generate_item_set_indicators";
-	public static final String PARAMETER_DATAMANAGEMENT = "datamanagement";
+	public static final String PARAMETER_DATAMANAGEMENT = ExampleSetGenerator.PARAMETER_DATAMANAGEMENT;
 
 	private InputPort frequentItemSetsInput = getInputPorts().createPort("frequent item sets", FrequentItemSets.class);
 	private OutputPort exampleSetOutput = getOutputPorts().createPort("example set");
@@ -113,8 +117,15 @@ public class FrequentItemSetsToData extends Operator {
 			}
 		}
 
-		MemoryExampleTable exampleTable = new MemoryExampleTable(attributes);
-		DataRowFactory dataRowFactory = new DataRowFactory(getParameterAsInt(PARAMETER_DATAMANAGEMENT), '.');
+		ExampleSetBuilder builder = ExampleSets.from(attributes).withExpectedSize(sets.size());
+
+		int datamanagement = getParameterAsInt(PARAMETER_DATAMANAGEMENT);
+		if (Boolean.parseBoolean(ParameterService.getParameterValue(RapidMiner.PROPERTY_RAPIDMINER_UPDATE_BETA_FEATURES))) {
+			datamanagement = DataRowFactory.TYPE_DOUBLE_ARRAY;
+			builder.withOptimizationHint(DataManagementParameterHelper.getSelectedDataManagement(this));
+		}
+
+		DataRowFactory dataRowFactory = new DataRowFactory(datamanagement, '.');
 		for (FrequentItemSet set : sets) {
 			DataRow dataRow = dataRowFactory.create(attributes.size());
 			dataRow.set(itemsAttribute, itemsAttribute.getMapping().mapString(set.getItemsAsString()));
@@ -132,15 +143,15 @@ public class FrequentItemSetsToData extends Operator {
 			dataRow.set(scoreAttribute, support / independentProbabilityEstimate);
 			if (generateItemSetIndicators) {
 				for (Item item : set.getItems()) {
-					assert (itemAttributeMap.containsKey(item)) : "item not inserted";
+					assert itemAttributeMap.containsKey(item) : "item not inserted";
 					Attribute attribute = itemAttributeMap.get(item);
 					dataRow.set(attribute, attribute.getMapping().mapString("true"));
 				}
 			}
-			exampleTable.addDataRow(dataRow);
+			builder.addDataRow(dataRow);
 		}
 
-		ExampleSet exampleSet = exampleTable.createExampleSet();
+		ExampleSet exampleSet = builder.build();
 		exampleSetOutput.deliver(exampleSet);
 		frequentItemSetsOutput.deliver(sets);
 	}
@@ -150,8 +161,7 @@ public class FrequentItemSetsToData extends Operator {
 		List<ParameterType> types = super.getParameterTypes();
 		types.add(new ParameterTypeBoolean(PARAMETER_GENERATE_ITEM_SET_INDICATORS,
 				"Determines whether item indicator attributes should be generated for the item sets.", false));
-		types.add(new ParameterTypeCategory(PARAMETER_DATAMANAGEMENT, "Determines, how the data is represented internally.",
-				DataRowFactory.TYPE_NAMES, DataRowFactory.TYPE_DOUBLE_ARRAY));
+		DataManagementParameterHelper.addParameterTypes(types, this);
 		return types;
 	}
 }

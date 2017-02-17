@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.tools.parameter;
 
 import com.rapidminer.parameter.ParameterType;
@@ -25,7 +25,7 @@ import com.rapidminer.parameter.ParameterType;
  * Value and Definition of a Parameter. Two types of parameters can be defined: Implicit ones and
  * Defined ones. The defined one have a type definition, while the implicit ones only have a key and
  * value. Only defined parameters can be edited using the GUI and will be saved in the config files.
- * 
+ *
  * @author Sebastian Land
  */
 public class Parameter {
@@ -44,10 +44,10 @@ public class Parameter {
 
 	/**
 	 * This creates a new defined Parameter with a default scope and an undefined value.
-	 * 
+	 *
 	 * The group of the Parameter is set automatically by the second segment of the dot separated
 	 * key. For setting the group explicitly, please use {@link #Parameter(ParameterType, String)}.
-	 * 
+	 *
 	 * @param type
 	 */
 	public Parameter(ParameterType type) {

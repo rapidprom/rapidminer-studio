@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.gui.processeditor;
 
 import java.io.Serializable;
@@ -69,6 +69,20 @@ public class NewOperatorGroupTreeModel implements TreeModel, OperatorServiceList
 		}
 	}
 
+	private static final class OperatorPriorityComparator implements Comparator<OperatorDescription> {
+
+		@Override
+		public int compare(OperatorDescription o1, OperatorDescription o2) {
+			try {
+				return Math.negateExact(Integer.compare(o1.getPriority(), o2.getPriority()));
+			} catch (ArithmeticException e) {
+				// no logging for idiotic error
+				return 0;
+			}
+		}
+
+	}
+
 	private final GroupTree completeTree;
 
 	private GroupTree displayedTree;
@@ -81,6 +95,11 @@ public class NewOperatorGroupTreeModel implements TreeModel, OperatorServiceList
 	private final List<TreeModelListener> treeModelListeners = new LinkedList<>();
 
 	private boolean sortByUsage = false;
+
+	/** sorts by <priority> key of operators */
+	private Comparator<OperatorDescription> priorityComparator = new OperatorPriorityComparator();
+	/** sorts by local usage count of operators */
+	private Comparator<OperatorDescription> usageComparator = new UsageStatsComparator();
 
 	public NewOperatorGroupTreeModel() {
 		this.completeTree = OperatorService.getGroups();
@@ -217,9 +236,12 @@ public class NewOperatorGroupTreeModel implements TreeModel, OperatorServiceList
 			removeDeprecated(filteredTree);
 		}
 		this.displayedTree = filteredTree;
+		filteredTree.sort(priorityComparator);
+
 		if (sortByUsage) {
-			filteredTree.sort(new UsageStatsComparator());
+			filteredTree.sort(usageComparator);
 		}
+
 		fireCompleteTreeChanged(this);
 		return expandedPaths;
 	}
@@ -336,7 +358,7 @@ public class NewOperatorGroupTreeModel implements TreeModel, OperatorServiceList
 				}
 			}
 			if (!matches && !groupMatches) {
-					o.remove();
+				o.remove();
 			} else {
 				hits++;
 			}

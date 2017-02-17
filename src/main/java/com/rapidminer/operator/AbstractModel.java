@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator;
 
 import com.rapidminer.example.ExampleSet;
@@ -47,6 +47,11 @@ public abstract class AbstractModel extends ResultObjectAdapter implements Model
 	 * is <code>null</code> nothing will happen else checkForStop will be called.
 	 */
 	private Operator operator = null;
+	
+	/**
+	 * This flag signalizes the apply method if progress in the {@link OperatorProgress} from {@link #getOperator()} should be shown.
+	 */
+	private boolean showProgress = false;
 
 	/**
 	 * Created a new model which was built on the given example set. Please note that the given
@@ -128,10 +133,19 @@ public abstract class AbstractModel extends ResultObjectAdapter implements Model
 	 * Operator. If the Operator is set to null nothing will happen and the Model will no longer
 	 * checkForStop.
 	 * 
-	 * @param operator
+	 * @param operator If {@code true} this operator will check for stop by calling checkForStop()
 	 */
 	public void setOperator(Operator operator) {
 		this.operator = operator;
+	}
+	
+	/**
+	 * If this flag is set to {@code true}, the apply method can show the progress in the {@link OperatorProgress} from {@link #getOperator()}
+	 * 
+	 * @param boolean When {@code true} progress will be shown when applying.
+	 */
+	public void setShowProgress(boolean showProgress) {
+		this.showProgress = showProgress;
 	}
 
 	/**
@@ -139,6 +153,13 @@ public abstract class AbstractModel extends ResultObjectAdapter implements Model
 	 */
 	public Operator getOperator() {
 		return operator;
+	}
+	
+	/**
+	 * {@code true} if progress should be shown while applying this model.
+	 */
+	public boolean getShowProgress() {
+		return showProgress;
 	}
 
 	/**

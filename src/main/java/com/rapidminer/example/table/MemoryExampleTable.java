@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.example.table;
 
 import java.util.ArrayList;
@@ -27,6 +27,7 @@ import java.util.Random;
 import java.util.logging.Level;
 
 import com.rapidminer.example.Attribute;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.tools.LogService;
 
 
@@ -37,7 +38,7 @@ import com.rapidminer.tools.LogService;
  *
  * @author Ingo Mierswa
  */
-public class MemoryExampleTable extends AbstractExampleTable {
+public class MemoryExampleTable extends AbstractExampleTable implements GrowingExampleTable {
 
 	private static final long serialVersionUID = -3000023475208774934L;
 
@@ -56,7 +57,9 @@ public class MemoryExampleTable extends AbstractExampleTable {
 	 * @param attributes
 	 *            Array of {@link Attribute} containing the attributes of the columns. None of these
 	 *            must be null.
+	 * @deprecated since 7.3. Use methods provided by {@link ExampleSets}.
 	 */
+	@Deprecated
 	public MemoryExampleTable(Attribute... attributes) {
 		this(Arrays.asList(attributes));
 	}
@@ -67,10 +70,28 @@ public class MemoryExampleTable extends AbstractExampleTable {
 	 * @param attributes
 	 *            List of {@link Attribute} containing the attributes of the columns. None of these
 	 *            must be null.
+	 * @deprecated since 7.3. Use methods provided by {@link ExampleSets}.
 	 */
+	@Deprecated
 	public MemoryExampleTable(List<Attribute> attributes) {
 		super(attributes);
 		this.columns = attributes.size();
+	}
+
+	/**
+	 * Creates a new instance of MemoryExampleTable with a row container of the expectedSize.
+	 *
+	 * @param attributes
+	 *            List of {@link Attribute} containing the attributes of the columns. None of these
+	 *            must be null.
+	 * @param expectedSize
+	 *            the expectedSize of rows to be added
+	 * @deprecated since 7.3. Use methods provided by {@link ExampleSets}.
+	 */
+	@Deprecated
+	public MemoryExampleTable(List<Attribute> attributes, int expectedSize) {
+		this(attributes);
+		dataList = new ArrayList<DataRow>(expectedSize);
 	}
 
 	/**
@@ -81,7 +102,9 @@ public class MemoryExampleTable extends AbstractExampleTable {
 	 *            must be null.
 	 * @param size
 	 *            initial size of this example table. All values will be Double.NaN.
+	 * @deprecated since 7.3. Use methods provided by {@link ExampleSets}.
 	 */
+	@Deprecated
 	public MemoryExampleTable(List<Attribute> attributes, DataRowFactory factory, int size) {
 		this(attributes);
 		dataList = new ArrayList<DataRow>(size);
@@ -96,14 +119,20 @@ public class MemoryExampleTable extends AbstractExampleTable {
 
 	/**
 	 * Creates an empty memory example table and fills it with the data rows read from i.
+	 * 
+	 * @deprecated since 7.3. Use methods provided by {@link ExampleSets}.
 	 */
+	@Deprecated
 	public MemoryExampleTable(List<Attribute> attributes, DataRowReader i) {
 		this(attributes, i, false);
 	}
 
 	/**
 	 * Creates an empty memory example table and fills it with the data rows read from i.
+	 * 
+	 * @deprecated since 7.3. Use methods provided by {@link ExampleSets}.
 	 */
+	@Deprecated
 	public MemoryExampleTable(List<Attribute> attributes, DataRowReader i, boolean permute) {
 		this(attributes);
 		readExamples(i, permute);
@@ -164,6 +193,7 @@ public class MemoryExampleTable extends AbstractExampleTable {
 	 * Convenience method allowing the adding of data rows without a data row reader. This will trim
 	 * the data row before to save memory.
 	 */
+	@Override
 	public void addDataRow(DataRow dataRow) {
 		dataRow.trim();
 		dataList.add(dataRow);

@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.functions;
 
 import java.util.Iterator;
@@ -27,6 +27,7 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.FastExample2SparseTransform;
 import com.rapidminer.example.set.ExampleSetUtilities;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.learner.PredictionModel;
 import com.rapidminer.tools.Tools;
 
@@ -43,6 +44,8 @@ import de.bwaldvogel.liblinear.Model;
 public class FastMarginModel extends PredictionModel {
 
 	private static final long serialVersionUID = 7701199447666181333L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 5000;
 
 	private Model linearModel;
 
@@ -79,6 +82,12 @@ public class FastMarginModel extends PredictionModel {
 		}
 
 		Iterator<Example> i = exampleSet.iterator();
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
+		}
+		int progressCounter = 0;
 		while (i.hasNext()) {
 			Example e = i.next();
 
@@ -101,6 +110,9 @@ public class FastMarginModel extends PredictionModel {
 				}
 			}
 
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted(progressCounter);
+			}
 		}
 		return exampleSet;
 	}

@@ -1,38 +1,22 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.tools;
-
-import com.rapidminer.example.Attribute;
-import com.rapidminer.example.AttributeRole;
-import com.rapidminer.example.Example;
-import com.rapidminer.example.ExampleSet;
-import com.rapidminer.example.Tools;
-import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.DoubleSparseArrayDataRow;
-import com.rapidminer.example.table.MemoryExampleTable;
-import com.rapidminer.example.table.NominalMapping;
-import com.rapidminer.example.table.PolynominalMapping;
-import com.rapidminer.example.table.SparseDataRow;
-import com.rapidminer.operator.Annotations;
-import com.rapidminer.tools.LogService;
-import com.rapidminer.tools.Ontology;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -50,12 +34,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
+import com.rapidminer.example.Attribute;
+import com.rapidminer.example.AttributeRole;
+import com.rapidminer.example.Example;
+import com.rapidminer.example.ExampleSet;
+import com.rapidminer.example.Tools;
+import com.rapidminer.example.table.AttributeFactory;
+import com.rapidminer.example.table.DoubleSparseArrayDataRow;
+import com.rapidminer.example.table.NominalMapping;
+import com.rapidminer.example.table.PolynominalMapping;
+import com.rapidminer.example.table.SparseDataRow;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
+import com.rapidminer.operator.Annotations;
+import com.rapidminer.tools.LogService;
+import com.rapidminer.tools.Ontology;
+
 
 /**
  * Writes and reads a example sets to and from from streams. TODO: Implement sparse counterpart.
- * 
+ *
  * @author Simon Fischer
- * 
+ *
  */
 public class ExampleSetToStream {
 
@@ -145,7 +145,7 @@ public class ExampleSetToStream {
 	 * Writes nominals and integers as integer, all others as double. All values are prefixed by a
 	 * boolean indicating whether the following value is missing, in which case the latter is not
 	 * sent at all.
-	 * 
+	 *
 	 * Iterates over all examples and all attributes - For non-sparse representation, each attribute
 	 * value is sent as the data type corresponding to the respective {@link ColumnType}. For
 	 * {@link ColumnType#INTEGER}, missing values are sent as Integer.MIN_VALUE+1 plus a "true"
@@ -232,8 +232,8 @@ public class ExampleSetToStream {
 		boolean sparse = header.isSparse();
 
 		// Create example table
-		MemoryExampleTable exampleTable = new MemoryExampleTable(allAttributes);
 		int size = in.readInt();
+		ExampleSetBuilder builder = ExampleSets.from(allAttributes).withExpectedSize(size);
 
 		// Read data
 		for (int row = 0; row < size; row++) {
@@ -248,16 +248,16 @@ public class ExampleSetToStream {
 					}
 				}
 				sparseRow.trim();
-				exampleTable.addDataRow(sparseRow);
+				builder.addDataRow(sparseRow);
 			} else {
 				double[] data = new double[allAttributeRoles.size()];
 				readRow(in, data, columnTypes, sparse, null);
-				exampleTable.addDataRow(new DoubleArrayDataRow(data));
+				builder.addRow(data);
 			}
 		}
 
 		// Create example set
-		ExampleSet exampleSet = exampleTable.createExampleSet();
+		ExampleSet exampleSet = builder.build();
 		// finally, set special attributes
 		for (AttributeRole role : allAttributeRoles) {
 			if (role.isSpecial()) {

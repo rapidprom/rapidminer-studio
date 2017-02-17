@@ -1,27 +1,30 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.performance;
+
+import java.util.LinkedList;
+import java.util.List;
 
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.table.AttributeFactory;
-import com.rapidminer.example.table.DoubleArrayDataRow;
-import com.rapidminer.example.table.MemoryExampleTable;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.operator.OperatorDescription;
 import com.rapidminer.operator.OperatorException;
@@ -33,15 +36,12 @@ import com.rapidminer.operator.ports.metadata.GenerateNewExampleSetMDRule;
 import com.rapidminer.operator.ports.metadata.MetaData;
 import com.rapidminer.tools.Ontology;
 
-import java.util.LinkedList;
-import java.util.List;
-
 
 /**
  * This operator creates a new example set from the given performance vector. The example set will
  * have a column with the criterion name, and columns for the average, variance and standard
  * deviation.
- * 
+ *
  * @author Marius Helf
  */
 public class PerformanceVectorToExampleSet extends Operator {
@@ -105,8 +105,9 @@ public class PerformanceVectorToExampleSet extends Operator {
 		int stdevIdx = attributes.indexOf(stdevAttribute);
 		int varianceIdx = attributes.indexOf(varianceAttribute);
 
-		MemoryExampleTable table = new MemoryExampleTable(attributes);
-		for (String name : performanceVector.getCriteriaNames()) {
+		String[] criteriaNames = performanceVector.getCriteriaNames();
+		ExampleSetBuilder builder = ExampleSets.from(attributes).withExpectedSize(criteriaNames.length);
+		for (String name : criteriaNames) {
 			PerformanceCriterion criterion = performanceVector.getCriterion(name);
 			double[] data = new double[attributes.size()];
 			data[nameIdx] = nameAttribute.getMapping().mapString(name);
@@ -115,9 +116,9 @@ public class PerformanceVectorToExampleSet extends Operator {
 			data[stdevIdx] = criterion.getStandardDeviation();
 			data[varianceIdx] = criterion.getVariance();
 
-			table.addDataRow(new DoubleArrayDataRow(data));
+			builder.addRow(data);
 		}
-		exampleSetOutput.deliver(table.createExampleSet());
+		exampleSetOutput.deliver(builder.build());
 		performanceOutput.deliver(performanceVector);
 	}
 }

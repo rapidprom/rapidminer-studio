@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.performance.test;
 
 import static junit.framework.Assert.assertEquals;
@@ -27,24 +27,24 @@ import java.util.List;
 import org.junit.Test;
 
 import com.rapidminer.example.Attribute;
+import com.rapidminer.example.Attributes;
 import com.rapidminer.example.Example;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.DataRowFactory;
-import com.rapidminer.example.table.MemoryExampleTable;
 import com.rapidminer.example.test.ExampleTestTools;
+import com.rapidminer.example.utils.ExampleSetBuilder;
+import com.rapidminer.example.utils.ExampleSets;
 import com.rapidminer.operator.performance.AbstractPerformanceEvaluator;
 import com.rapidminer.operator.performance.BinaryClassificationPerformance;
 import com.rapidminer.operator.performance.MultiClassificationPerformance;
 import com.rapidminer.operator.performance.PerformanceCriterion;
 import com.rapidminer.operator.performance.PerformanceVector;
-import com.rapidminer.tools.att.AttributeSet;
 
 
 /**
  * Tests classification criteria.
- * 
- * @author Simon Fischer, Ingo Mierswa
- *          ingomierswa Exp $
+ *
+ * @author Simon Fischer, Ingo Mierswa ingomierswa Exp $
  */
 public class ClassificationCriterionTest extends AbstractCriterionTestCase {
 
@@ -56,13 +56,13 @@ public class ClassificationCriterionTest extends AbstractCriterionTestCase {
 		int yes = label.getMapping().mapString("yes"); // positive class
 		List<Attribute> attributeList = new LinkedList<Attribute>();
 		attributeList.add(label);
-		MemoryExampleTable exampleTable = new MemoryExampleTable(attributeList, ExampleTestTools.createDataRowReader(new DataRowFactory(DataRowFactory.TYPE_DOUBLE_ARRAY, '.'), new Attribute[] { label }, new String[][] { { "no" }, { "yes" }, { "yes" }, { "no" }, { "yes" }, { "no" }, { "yes" }, { "yes" },
-				{ "yes" }, { "no" }, { "no" }, { "yes" } }));
+		ExampleSetBuilder builder = ExampleSets.from(attributeList)
+				.withDataRowReader(ExampleTestTools.createDataRowReader(
+						new DataRowFactory(DataRowFactory.TYPE_DOUBLE_ARRAY, '.'), new Attribute[] { label },
+						new String[][] { { "no" }, { "yes" }, { "yes" }, { "no" }, { "yes" }, { "no" }, { "yes" }, { "yes" },
+								{ "yes" }, { "no" }, { "no" }, { "yes" } }));
 
-		AttributeSet attributeSet = new AttributeSet();
-		attributeSet.setSpecialAttribute("label", label);
-
-		ExampleSet eSet = exampleTable.createExampleSet(attributeSet);
+		ExampleSet eSet = builder.withRole(label, Attributes.LABEL_NAME).build();
 		Attribute predictedLabel = ExampleTestTools.createPredictedLabel(eSet);
 
 		// eSet.createPredictedLabel();

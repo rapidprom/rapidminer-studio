@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.meta;
 
 import java.util.Arrays;
@@ -31,6 +31,7 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.operator.Model;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.learner.PredictionModel;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.Tools;
@@ -45,6 +46,8 @@ import com.rapidminer.tools.Tools;
 public class MetaCostModel extends PredictionModel implements MetaModel {
 
 	private static final long serialVersionUID = -7378871544357578954L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 5000;
 
 	private Model[] models;
 
@@ -86,6 +89,13 @@ public class MetaCostModel extends PredictionModel implements MetaModel {
 			currentNumber++;
 		}
 
+		// initialize progress
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(100);
+		}
+
 		// 1. Iterate over all models and all examples for every model to receive all confidence
 		// values.
 		for (int k = 0; k < getNumberOfModels(); k++) {
@@ -106,6 +116,10 @@ public class MetaCostModel extends PredictionModel implements MetaModel {
 				counter++;
 			}
 			PredictionModel.removePredictedLabel(exampleSet);
+
+			if (progress != null) {
+				progress.setCompleted((int) (80.0 * k / getNumberOfModels()));
+			}
 		}
 
 		// 2. Iterate again over all examples to compute a prediction and a confidence distribution
@@ -142,6 +156,10 @@ public class MetaCostModel extends PredictionModel implements MetaModel {
 				example.setConfidence(classIndexMap.get(i), confidences[counter][i]);
 			}
 			counter++;
+
+			if (progress != null && counter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted((int) (20.0 * counter / originalExampleSet.size()) + 80);
+			}
 		}
 		return originalExampleSet;
 	}

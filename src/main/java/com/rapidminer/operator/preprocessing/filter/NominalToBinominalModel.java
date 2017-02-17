@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.preprocessing.filter;
 
 import java.util.HashSet;
@@ -35,6 +35,7 @@ import com.rapidminer.example.table.BinominalMapping;
 import com.rapidminer.example.table.NominalMapping;
 import com.rapidminer.example.table.ViewAttribute;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.operator.preprocessing.PreprocessingModel;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.Tools;
@@ -53,6 +54,8 @@ import com.rapidminer.tools.Tools;
 public class NominalToBinominalModel extends PreprocessingModel {
 
 	private static final long serialVersionUID = 2882937201039541604L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 1_000_000;
 
 	private final Set<String> dichotomizationAttributeNames;
 	private final Set<String> changeTypeAttributeNames;
@@ -144,8 +147,10 @@ public class NominalToBinominalModel extends PreprocessingModel {
 		int progressCompletedCounter = 0;
 		long workloadForEachLoop = dichotomizationMap.size() + changeTypeMap.size();
 		long progressTriggerCounter = 0;
-		if (getOperator() != null) {
-			getOperator().getProgress().setTotal(exampleSet.size());
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(exampleSet.size());
 		}
 
 		// fill new attributes with values
@@ -164,9 +169,9 @@ public class NominalToBinominalModel extends PreprocessingModel {
 
 			// trigger progress
 			++progressCompletedCounter;
-			if (getOperator() != null && ++progressTriggerCounter * workloadForEachLoop > 1000000L) {
+			if (progress != null && ++progressTriggerCounter * workloadForEachLoop > OPERATOR_PROGRESS_STEPS) {
 				progressTriggerCounter = 0;
-				getOperator().getProgress().setCompleted(progressCompletedCounter);
+				progress.setCompleted(progressCompletedCounter);
 			}
 		}
 
@@ -196,7 +201,7 @@ public class NominalToBinominalModel extends PreprocessingModel {
 		for (Attribute attribute : applySet.getAttributes()) {
 			if (dichotomizationAttributeNames.contains(attribute.getName())) {
 				// add binominal attributes for every value
-				for (String value : attribute.getMapping().getValues()) {
+				for (String value : getTrainingHeader().getAttributes().get(attribute.getName()).getMapping().getValues()) {
 					attributes.addRegular(createBinominalValueAttribute(attribute, value));
 				}
 			} else {
@@ -272,6 +277,11 @@ public class NominalToBinominalModel extends PreprocessingModel {
 
 	public boolean shouldUseOnlyUnderscoreInNames() {
 		return useOnlyUnderscoreInNames;
+	}
+
+	@Override
+	protected boolean needsRemapping() {
+		return false;
 	}
 
 }

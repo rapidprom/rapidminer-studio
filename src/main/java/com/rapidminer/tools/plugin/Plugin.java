@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.tools.plugin;
 
 import java.awt.Frame;
@@ -98,6 +98,7 @@ import com.rapidminer.tools.ResourceSource;
 import com.rapidminer.tools.Tools;
 import com.rapidminer.tools.WebServiceTools;
 import com.rapidminer.tools.container.Pair;
+import com.rapidminer.tools.usagestats.ActionStatisticsCollector;
 
 
 /**
@@ -295,6 +296,9 @@ public class Plugin {
 		PLUGIN_BLACKLIST.put("rmx_web", upToRm711);
 		PLUGIN_BLACKLIST.put("rmx_r_scripting", upToRm711);
 		PLUGIN_BLACKLIST.put("rmx_python_scripting", upToRm711);
+
+		// Radoop depends on Parallel Decision Tree in Concurrency Extension
+		PLUGIN_BLACKLIST.put("rmx_radoop", new Pair<>(null, new VersionNumber(7, 3, 0)));
 
 		// RapidLabs / 3rd party extensions causing problems since Studio 7.2
 		PLUGIN_BLACKLIST.put("rmx_rapidprom", new Pair<>(null, new VersionNumber(3, 0, 7)));
@@ -1321,15 +1325,26 @@ public class Plugin {
 		});
 		for (Entry<String, Long> entry : sortedLoadingTimes) {
 			Plugin plugin = getPluginByExtensionId(entry.getKey());
-			String name = plugin != null ? plugin.getName() : entry.getKey();
 			String value = String.valueOf(entry.getValue()) + "ms";
 			Level logLevel = Level.INFO;
 			if (entry.getValue() > LOADING_THRESHOLD) {
 				value = Tools.formatDuration(entry.getValue());
 				logLevel = Level.WARNING;
 			}
-			LogService.getRoot().log(logLevel, "com.rapidminer.tools.plugin.Plugin.loading_time",
-					new Object[] { name, value });
+
+			String identifier;
+			if (plugin != null) {
+				LogService.getRoot().log(logLevel, "com.rapidminer.tools.plugin.Plugin.loading_time",
+						new Object[] { plugin.getName(), value });
+				identifier = plugin.getExtensionId();
+			} else {
+				LogService.getRoot().log(logLevel, "com.rapidminer.tools.plugin.Plugin.loading_time_failure",
+						new Object[] { entry.getKey(), value });
+				identifier = entry.getKey();
+			}
+
+			ActionStatisticsCollector.INSTANCE.log(ActionStatisticsCollector.TYPE_CONSTANT,
+					ActionStatisticsCollector.VALUE_EXTENSION_INITIALIZATION, identifier);
 		}
 	}
 

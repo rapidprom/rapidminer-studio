@@ -1,22 +1,27 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.ports;
+
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 
 import com.rapidminer.operator.IOObject;
 import com.rapidminer.operator.UserError;
@@ -26,21 +31,16 @@ import com.rapidminer.operator.ports.metadata.SimplePrecondition;
 import com.rapidminer.tools.Observable;
 import com.rapidminer.tools.Observer;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-
 
 /**
  * This class observes a set of input and output ports and adds additional ports as needed.
  * Operators probably want to connect these ports by a
  * {@link com.rapidminer.operator.ports.metadata.ManyToManyPassThroughRule}. It guarantees that
  * there is always exactly one pair of in and output pairs which is not connected.
- * 
+ *
  * @see PortPairExtender
  * @see MultiPortPairExtender
- * 
+ *
  * @author Simon Fischer
  */
 public class PortPairExtender implements PortExtender {
@@ -93,7 +93,7 @@ public class PortPairExtender implements PortExtender {
 
 	/**
 	 * Creates a new port pair extender
-	 * 
+	 *
 	 * @param name
 	 *            The name prefix for all generated ports.
 	 * @param inPorts
@@ -134,7 +134,7 @@ public class PortPairExtender implements PortExtender {
 					}
 				}
 			}
-			if ((foundDisconnected == null) || (managedPairs.size() < minNumber)) {
+			if (foundDisconnected == null || managedPairs.size() < minNumber) {
 				do {
 					managedPairs.add(createPort());
 				} while (managedPairs.size() < minNumber);
@@ -247,7 +247,7 @@ public class PortPairExtender implements PortExtender {
 	/**
 	 * Returns a list of all non-null data delivered to the input ports created by this port
 	 * extender.
-	 * 
+	 *
 	 * @throws UserError
 	 * @deprecated use {@link #getData(Class))}
 	 */
@@ -277,7 +277,7 @@ public class PortPairExtender implements PortExtender {
 	/**
 	 * Returns a list of all non-null data delivered to the input ports created by this port
 	 * extender.
-	 * 
+	 *
 	 * @throws UserError
 	 * @deprecated use {@link #getOutputData(Class)}
 	 */
@@ -328,6 +328,14 @@ public class PortPairExtender implements PortExtender {
 		return name + " ";
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * ATTENTION: Make sure to call <strong>after</strong> {@link #start()}, otherwise you will end
+	 * up with n+1 ports!
+	 * </p>
+	 */
 	@Override
 	public void ensureMinimumNumberOfPorts(int minNumber) {
 		this.minNumber = minNumber;

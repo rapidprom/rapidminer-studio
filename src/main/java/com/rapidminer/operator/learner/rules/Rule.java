@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.learner.rules;
 
 import java.io.Serializable;
@@ -37,7 +37,7 @@ import com.rapidminer.operator.learner.tree.SplitCondition;
  * condition1 and condition2 ... and conditionN then labelname = labelValue" It provides a test
  * method, to test if examples belong to the labelValue of this rule. The rule is build
  * incrementally, SplitConditions may be added by addTerm
- * 
+ *
  * @author Sebastian Land, Ingo Mierswa
  */
 public class Rule implements Serializable {
@@ -163,7 +163,7 @@ public class Rule implements Serializable {
 
 	/**
 	 * This method adds a condition to the conjunction in the rule's head
-	 * 
+	 *
 	 * @param condition
 	 *            This condition is added
 	 */
@@ -196,7 +196,7 @@ public class Rule implements Serializable {
 			}
 			counter++;
 		}
-		SplittedExampleSet result = new SplittedExampleSet(exampleSet, new Partition(partition, 2));
+		SplittedExampleSet result = new SplittedExampleSet(exampleSet, new Partition(partition, 2), true);
 		result.selectSingleSubset(1);
 		return result;
 	}
@@ -210,7 +210,7 @@ public class Rule implements Serializable {
 			}
 			counter++;
 		}
-		SplittedExampleSet result = new SplittedExampleSet(exampleSet, new Partition(partition, 2));
+		SplittedExampleSet result = new SplittedExampleSet(exampleSet, new Partition(partition, 2), true);
 		result.selectSingleSubset(0);
 		return result;
 	}

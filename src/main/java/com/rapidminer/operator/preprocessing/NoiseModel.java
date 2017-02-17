@@ -1,21 +1,21 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.operator.preprocessing;
 
 import com.rapidminer.example.Attribute;
@@ -28,6 +28,7 @@ import com.rapidminer.example.Statistics;
 import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.example.table.ViewAttribute;
 import com.rapidminer.operator.OperatorException;
+import com.rapidminer.operator.OperatorProgress;
 import com.rapidminer.tools.Ontology;
 import com.rapidminer.tools.RandomGenerator;
 
@@ -46,6 +47,8 @@ import java.util.Set;
 public class NoiseModel extends PreprocessingModel {
 
 	private static final long serialVersionUID = -1953073746280248791L;
+
+	private static final int OPERATOR_PROGRESS_STEPS = 100;
 
 	// settings
 	private double attributeNoise;
@@ -97,6 +100,12 @@ public class NoiseModel extends PreprocessingModel {
 		// add noise to existing attributes
 		Iterator<Example> reader = exampleSet.iterator();
 		Attribute label = exampleSet.getAttributes().getLabel();
+		OperatorProgress progress = null;
+		if (getShowProgress() && getOperator() != null && getOperator().getProgress() != null) {
+			progress = getOperator().getProgress();
+			progress.setTotal(100);
+		}
+		int progressCounter = 0;
 		while (reader.hasNext()) {
 			Example example = reader.next();
 			// attribute noise
@@ -124,20 +133,32 @@ public class NoiseModel extends PreprocessingModel {
 					}
 				}
 			}
+
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted((int) (40.0 * progressCounter / exampleSet.size()));
+			}
 		}
 
 		// add new noise attributes
 		List<Attribute> newAttributes = new LinkedList<Attribute>();
+		progressCounter = 0;
 		for (String name : noiseAttributeNames) {
 			Attribute newAttribute = AttributeFactory.createAttribute(name, Ontology.REAL);
 			newAttributes.add(newAttribute);
 			exampleSet.getExampleTable().addAttribute(newAttribute);
 			exampleSet.getAttributes().addRegular(newAttribute);
+			if (progress != null) {
+				progress.setCompleted((int) ((20.0 * ++progressCounter / noiseAttributeNames.length) + 40));
+			}
 		}
 
+		progressCounter = 0;
 		for (Example example : exampleSet) {
 			for (Attribute attribute : newAttributes) {
 				example.setValue(attribute, noiseOffset + noiseFactor * random.nextGaussian());
+			}
+			if (progress != null && ++progressCounter % OPERATOR_PROGRESS_STEPS == 0) {
+				progress.setCompleted((int) ((40.0 * progressCounter / exampleSet.size()) + 60));
 			}
 		}
 		return exampleSet;
@@ -220,7 +241,7 @@ public class NoiseModel extends PreprocessingModel {
 	public boolean isSupportingAttributeRoles() {
 		return true;
 	}
-	
+
 	public double getAttributeNoise() {
 		return attributeNoise;
 	}
@@ -228,25 +249,35 @@ public class NoiseModel extends PreprocessingModel {
 	public double getLabelNoise() {
 		return labelNoise;
 	}
-	
+
 	public double getNoiseOffset() {
 		return noiseOffset;
 	}
-	
+
 	public double getNoiseFactor() {
 		return noiseFactor;
 	}
-	
+
 	public double getLabelRange() {
 		return labelRange;
 	}
-	
+
 	public String[] getNoiseAttributeNames() {
 		return noiseAttributeNames;
 	}
-	
+
 	public Map<String, Double> getNoiseMap() {
 		return noiseMap;
 	}
-	
+
+	@Override
+	protected boolean writesIntoExistingData() {
+		return true;
+	}
+
+	@Override
+	protected boolean needsRemapping() {
+		return false;
+	}
+
 }

@@ -1,25 +1,27 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.gui.security;
 
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
+import java.util.Collections;
 
 import javax.swing.Action;
 import javax.swing.DefaultRowSorter;
@@ -32,6 +34,7 @@ import com.rapidminer.gui.ApplicationFrame;
 import com.rapidminer.gui.tools.ExtendedJScrollPane;
 import com.rapidminer.gui.tools.ResourceAction;
 import com.rapidminer.gui.tools.dialogs.ButtonDialog;
+import com.rapidminer.tools.GlobalAuthenticator;
 
 
 /**
@@ -94,9 +97,14 @@ public class PasswordManager extends ButtonDialog {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				int[] rows = table.getSelectedRows();
-				for (int i = 0; i <= rows.length - 1; i++) {
-					credentialsModel.removeRow(rows[i]);
+				int[] selectedTableRows = table.getSelectedRows();
+				ArrayList<Integer> modelRows = new ArrayList<>(selectedTableRows.length);
+				for (int i = 0; i <= selectedTableRows.length - 1; i++) {
+					modelRows.add(table.getRowSorter().convertRowIndexToModel(selectedTableRows[i]));
+				}
+				Collections.sort(modelRows);
+				for (int i = modelRows.size() - 1; i >= 0; i--) {
+					credentialsModel.removeRow(modelRows.get(i));
 				}
 			}
 		};
@@ -105,8 +113,7 @@ public class PasswordManager extends ButtonDialog {
 		showPasswordsButton = new JButton(showPasswordsAction);
 		showpasswordPanel.add(makeButtonPanel(showPasswordsButton));
 		buttonPanel.add(showpasswordPanel, BorderLayout.WEST);
-		buttonPanel
-		.add(makeButtonPanel(new JButton(removePasswordAction), makeOkButton("password_manager_save"),
+		buttonPanel.add(makeButtonPanel(new JButton(removePasswordAction), makeOkButton("password_manager_save"),
 				makeCancelButton()), BorderLayout.EAST);
 		layoutDefault(main, buttonPanel, LARGE);
 	}
@@ -115,6 +122,7 @@ public class PasswordManager extends ButtonDialog {
 	protected void ok() {
 		Wallet.setInstance(clone);
 		clone.saveCache();
+		GlobalAuthenticator.refreshProxyAuthenticators();
 		super.ok();
 	}
 

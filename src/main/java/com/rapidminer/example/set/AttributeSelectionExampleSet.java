@@ -1,22 +1,24 @@
 /**
- * Copyright (C) 2001-2016 by RapidMiner and the contributors
- *
+ * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * 
  * Complete list of developers available at our web site:
- *
+ * 
  * http://rapidminer.com
- *
+ * 
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
- */
+*/
 package com.rapidminer.example.set;
+
+import java.util.Iterator;
 
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.Attributes;
@@ -24,13 +26,11 @@ import com.rapidminer.example.Example;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.table.ExampleTable;
 
-import java.util.Iterator;
-
 
 /**
  * An implementation of ExampleSet that is only a fixed view on a selection of attributes of the
  * parent example set.
- * 
+ *
  * @author Ingo Mierswa
  */
 public class AttributeSelectionExampleSet extends AbstractExampleSet {
@@ -78,7 +78,7 @@ public class AttributeSelectionExampleSet extends AbstractExampleSet {
 		if (!(o instanceof AttributeSelectionExampleSet)) {
 			return false;
 		}
-		return this.parent.equals((o));
+		return this.parent.equals(o);
 	}
 
 	@Override
@@ -115,5 +115,10 @@ public class AttributeSelectionExampleSet extends AbstractExampleSet {
 	@Override
 	public int size() {
 		return parent.size();
+	}
+
+	@Override
+	public void cleanup() {
+		parent.cleanup();
 	}
 }
