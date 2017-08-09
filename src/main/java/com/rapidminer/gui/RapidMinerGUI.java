@@ -90,6 +90,7 @@ import com.rapidminer.studio.io.data.internal.file.binary.BinaryDataSourceFactor
 import com.rapidminer.studio.io.data.internal.file.csv.CSVDataSourceFactory;
 import com.rapidminer.studio.io.data.internal.file.excel.ExcelDataSourceFactory;
 import com.rapidminer.tools.FileSystemService;
+import com.rapidminer.tools.FontTools;
 import com.rapidminer.tools.I18N;
 import com.rapidminer.tools.LaunchListener;
 import com.rapidminer.tools.LaunchListener.RemoteControlHandler;
@@ -155,6 +156,7 @@ public class RapidMinerGUI extends RapidMiner {
 	 * are connected
 	 */
 	public static final String PROPERTY_SHOW_NO_RESULT_WARNING = "rapidminer.gui.no_result_port_connected";
+	public static final String PROPERTY_FONT_CONFIG = "rapidminer.gui.font_config";
 
 	public static final String PROPERTY_TRANSFER_USAGESTATS = "rapidminer.gui.transfer_usagestats";
 	public static final String[] PROPERTY_TRANSFER_USAGESTATS_ANSWERS = { "ask", "always", "never" };
@@ -197,6 +199,8 @@ public class RapidMinerGUI extends RapidMiner {
 		RapidMiner.registerParameter(new ParameterTypeBoolean(PROPERTY_FETCH_DATA_BASE_TABLES_NAMES, "", true));
 		RapidMiner.registerParameter(new ParameterTypeBoolean(PROPERTY_DISCONNECT_ON_DISABLE, "", true));
 		RapidMiner.registerParameter(new ParameterTypeBoolean(PROPERTY_SHOW_NO_RESULT_WARNING, "", true));
+		RapidMiner.registerParameter(new ParameterTypeCategory(RapidMinerGUI.PROPERTY_FONT_CONFIG, "",
+				FontTools.getAvailableFonts(), FontTools.OPTION_INDEX_STANDARD_FONTS));
 		RapidMiner.registerParameter(new ParameterTypeCategory(PROPERTY_TRANSFER_USAGESTATS, "",
 				RapidMinerGUI.PROPERTY_TRANSFER_USAGESTATS_ANSWERS, UsageStatsTransmissionDialog.ALWAYS));
 		RapidMiner.registerParameter(new ParameterTypeCategory(PROPERTY_DRAG_TARGET_HIGHLIGHTING, "",
@@ -357,8 +361,10 @@ public class RapidMinerGUI extends RapidMiner {
 
 		RapidMiner.splashMessage("workspace");
 		RapidMiner.splashMessage("plaf");
+
 		setupToolTipManager();
 		setupGUI();
+		FontTools.checkAndSetFallbackUIFont();
 
 		// check whether current EULA has been accepted
 		if (!EULADialog.getEULAAccepted()) {
