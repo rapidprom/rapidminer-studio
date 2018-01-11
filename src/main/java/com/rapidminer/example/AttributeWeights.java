@@ -275,21 +275,13 @@ public class AttributeWeights extends AverageVector {
 	}
 
 	public void writeAttributeWeights(File file, Charset encoding) throws IOException {
-		PrintWriter out = null;
-		try {
-			out = new PrintWriter(new FileWriter(file));
+		try (FileWriter fw = new FileWriter(file); PrintWriter out = new PrintWriter(fw)) {
 			out.println("<?xml version=\"1.0\" encoding=\"" + encoding + "\"?>");
 			out.println("<attributeweights version=\"" + RapidMiner.getShortVersion() + "\">");
 			for (Entry<String, AttributeWeight> entry : weightMap.entrySet()) {
 				out.println("    <weight name=\"" + entry.getKey() + "\" value=\"" + entry.getValue().getWeight() + "\"/>");
 			}
 			out.println("</attributeweights>");
-		} catch (IOException e) {
-			throw e;
-		} finally {
-			if (out != null) {
-				out.close();
-			}
 		}
 	}
 
@@ -372,6 +364,28 @@ public class AttributeWeights extends AverageVector {
 			double newWeight = 1.0d;
 			if (diff != 0.0d) {
 				newWeight = (Math.abs(attributeWeight.getWeight()) - weightMin) / diff;
+			}
+			attributeWeight.setWeight(newWeight);
+		}
+	}
+
+	/**
+	 * This method divides each weight by the sum of weights.
+	 * 
+	 * @since 8.0
+	 */
+	public void relativize() {
+		double sum = 0;
+		for (String name : getAttributeNames()) {
+			double weight = Math.abs(getWeight(name));
+			sum += weight;
+		}
+		Iterator<AttributeWeight> w = weightMap.values().iterator();
+		while (w.hasNext()) {
+			AttributeWeight attributeWeight = w.next();
+			double newWeight = attributeWeight.getWeight();
+			if (sum != 0.0d) {
+				newWeight = Math.abs(newWeight) / sum;
 			}
 			attributeWeight.setWeight(newWeight);
 		}

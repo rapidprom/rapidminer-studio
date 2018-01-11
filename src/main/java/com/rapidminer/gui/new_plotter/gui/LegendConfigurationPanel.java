@@ -22,7 +22,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
@@ -125,7 +124,7 @@ public class LegendConfigurationPanel extends AbstractConfigurationPanel {
 				private static final long serialVersionUID = 1L;
 
 				@Override
-				public void actionPerformed(ActionEvent e) {
+				public void loggedActionPerformed(ActionEvent e) {
 					createLegendFontDialog();
 				}
 			});
@@ -145,7 +144,7 @@ public class LegendConfigurationPanel extends AbstractConfigurationPanel {
 						private static final long serialVersionUID = 1L;
 
 						@Override
-						public void actionPerformed(ActionEvent e) {
+						public void loggedActionPerformed(ActionEvent e) {
 							createLegendFontColorDialog();
 						}
 
@@ -185,7 +184,7 @@ public class LegendConfigurationPanel extends AbstractConfigurationPanel {
 						private static final long serialVersionUID = 1L;
 
 						@Override
-						public void actionPerformed(ActionEvent e) {
+						public void loggedActionPerformed(ActionEvent e) {
 							createLegendBackgroundColorDialog();
 
 						}
@@ -225,7 +224,7 @@ public class LegendConfigurationPanel extends AbstractConfigurationPanel {
 						private static final long serialVersionUID = 1L;
 
 						@Override
-						public void actionPerformed(ActionEvent e) {
+						public void loggedActionPerformed(ActionEvent e) {
 							createLegendFrameColorDialog();
 
 						}

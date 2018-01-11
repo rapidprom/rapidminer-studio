@@ -109,7 +109,7 @@ enum CtaDao {
 			Key key = event.getKey();
 			insertEvent.setString(1, key.getType());
 			insertEvent.setString(2, key.getValue());
-			insertEvent.setString(3, key.getArg());
+			insertEvent.setString(3, key.getArgWithIndicators());
 			insertEvent.setLong(4, event.getValue());
 			insertEvent.addBatch();
 			// We do not clear the parameter since we override them anyway
@@ -132,17 +132,18 @@ enum CtaDao {
 		int index = -1;
 		for (PreparedStatement statement : statements) {
 			index++;
-			ResultSet result = statement.executeQuery();
-			if (result.next()) {
-				isValid = result.getBoolean(1);
-			}
-			// Abort if one condition is unsatisfied
-			if (!isValid) {
-				// Fail earlier next time
-				if (index > 0) {
-					Collections.swap(statements, 0, index);
+			try (ResultSet result = statement.executeQuery()) {
+				if (result.next()) {
+					isValid = result.getBoolean(1);
 				}
-				return isValid;
+				// Abort if one condition is unsatisfied
+				if (!isValid) {
+					// Fail earlier next time
+					if (index > 0) {
+						Collections.swap(statements, 0, index);
+					}
+					return isValid;
+				}
 			}
 		}
 		return isValid;
@@ -180,11 +181,15 @@ enum CtaDao {
 	 */
 	public void cleanUpDatabase() throws SQLException {
 		deleteOlderOneMonth.executeUpdate();
-		ResultSet oldResult = selectOver250k.executeQuery();
-		if (oldResult.next()) {
-			Timestamp old = oldResult.getTimestamp(1);
-			deleteOlderThan.setTimestamp(1, old);
-			deleteOlderThan.executeUpdate();
+		try (ResultSet oldResult = selectOver250k.executeQuery()) {
+			if (oldResult.next()) {
+				Timestamp old = oldResult.getTimestamp(1);
+				deleteOlderThan.setTimestamp(1, old);
+				long n = deleteOlderThan.executeUpdate();
+				ActionStatisticsCollector.getInstance().logCountSumMinMax(ActionStatisticsCollector.TYPE_CTA, ActionStatisticsCollector.VALUE_CTA_LIMIT, ActionStatisticsCollector.ARG_CTA_LIMIT_DELETED_EVENTS, n);
+				long timeFrame = System.currentTimeMillis() - old.getTime();
+				ActionStatisticsCollector.getInstance().logMinMax(ActionStatisticsCollector.TYPE_CTA, ActionStatisticsCollector.VALUE_CTA_LIMIT, ActionStatisticsCollector.ARG_CTA_LIMIT_DECREASED_TIMEFRAME, timeFrame);
+			}
 		}
 	}
 

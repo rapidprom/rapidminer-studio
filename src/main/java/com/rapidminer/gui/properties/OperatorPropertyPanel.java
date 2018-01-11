@@ -190,7 +190,7 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void loggedActionPerformed(ActionEvent e) {
 				TOGGLE_EXPERT_MODE_ACTION.actionPerformed(null);
 			}
 		});
@@ -199,7 +199,7 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void loggedActionPerformed(ActionEvent e) {
 				TOGGLE_EXPERT_MODE_ACTION.actionPerformed(null);
 			}
 		});
@@ -592,7 +592,7 @@ public class OperatorPropertyPanel extends PropertyPanel implements Dockable, Pr
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void loggedActionPerformed(ActionEvent e) {
 				compatibilityLevelSpinner.setVisible(true);
 				compatibilityLabel.setVisible(true);
 				changeCompatibility.setVisible(false);
