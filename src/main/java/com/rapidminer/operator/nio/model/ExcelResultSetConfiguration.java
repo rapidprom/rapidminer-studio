@@ -1,31 +1,30 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
- * 
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
+ *
  * Complete list of developers available at our web site:
- * 
+ *
  * http://rapidminer.com
- * 
+ *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
-*/
+ */
 package com.rapidminer.operator.nio.model;
-
-import static com.rapidminer.operator.nio.ExcelExampleSource.PARAMETER_SHEET_NUMBER;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.zip.ZipFile;
-
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
 import javax.xml.parsers.ParserConfigurationException;
@@ -44,6 +43,7 @@ import com.rapidminer.operator.nio.model.xlsx.XlsxSheetTableModel;
 import com.rapidminer.operator.nio.model.xlsx.XlsxWorkbookParser;
 import com.rapidminer.operator.nio.model.xlsx.XlsxWorkbookParser.XlsxWorkbook;
 import com.rapidminer.operator.ports.metadata.ExampleSetMetaData;
+import com.rapidminer.parameter.ParameterTypeDateFormat;
 import com.rapidminer.parameter.UndefinedParameterError;
 import com.rapidminer.tools.ProgressListener;
 import com.rapidminer.tools.Tools;
@@ -59,7 +59,17 @@ import jxl.read.biff.BiffException;
  *
  * @author Sebastian Land, Marco Boeck, Nils Woehler
  */
-public class ExcelResultSetConfiguration implements DataResultSetFactory {
+public class ExcelResultSetConfiguration implements DataResultSetFactory, ExcelSheetSelection {
+
+	public static final String EXCEL_FILE_LOCATION = "excel.fileLocation";
+	public static final String EXCEL_SHEET_SELECTION_MODE = "excel.sheetSelectionMode";
+	public static final String EXCEL_SHEET_NAME = "excel.sheetName";
+	public static final String EXCEL_SHEET = "excel.sheet";
+	public static final String EXCEL_ROW_OFFSET = "excel.rowOffset";
+	public static final String EXCEL_ROW_LAST = "excel.rowLast";
+	public static final String EXCEL_COLUMN_OFFSET = "excel.columnOffset";
+	public static final String EXCEL_COLUMN_LAST = "excel.columnLast";
+	public static final String EXCEL_HEADER_ROW_INDEX = "excel.headerRowIndex";
 
 	private static final String XLS_FILE_ENDING = ".xls";
 	private static final String XLSX_FILE_ENDING = ".xlsx";
@@ -71,6 +81,8 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 
 	/** Numbering starts at 0. */
 	private int sheet = -1;
+	private String sheetName;
+	private SheetSelectionMode sheetSelectionMode = SheetSelectionMode.BY_INDEX;
 
 	private Charset encoding;
 	private jxl.Workbook workbookJXL;
@@ -90,9 +102,14 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 		if (excelExampleSource.isParameterSet(ExcelExampleSource.PARAMETER_IMPORTED_CELL_RANGE)) {
 			parseExcelRange(excelExampleSource.getParameterAsString(ExcelExampleSource.PARAMETER_IMPORTED_CELL_RANGE));
 		}
-
-		if (excelExampleSource.isParameterSet(PARAMETER_SHEET_NUMBER)) {
-			this.sheet = excelExampleSource.getParameterAsInt(PARAMETER_SHEET_NUMBER) - 1;
+		if (excelExampleSource.isParameterSet(ExcelExampleSource.PARAMETER_SHEET_SELECTION)) {
+			sheetSelectionMode = SheetSelectionMode.get(excelExampleSource.getParameterAsInt(ExcelExampleSource.PARAMETER_SHEET_SELECTION));
+		}
+		if (excelExampleSource.isParameterSet(ExcelExampleSource.PARAMETER_SHEET_NAME)) {
+			sheetName = excelExampleSource.getParameterAsString(ExcelExampleSource.PARAMETER_SHEET_NAME);
+		}
+		if (excelExampleSource.isParameterSet(ExcelExampleSource.PARAMETER_SHEET_NUMBER)) {
+			sheet = excelExampleSource.getParameterAsInt(ExcelExampleSource.PARAMETER_SHEET_NUMBER) - 1;
 		}
 		if (excelExampleSource.isFileSpecified()) {
 			this.workbookFile = excelExampleSource.getSelectedFile();
@@ -112,8 +129,8 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 			}
 		}
 
-		if (excelExampleSource.isParameterSet(AbstractDataResultSetReader.PARAMETER_DATE_FORMAT)) {
-			datePattern = excelExampleSource.getParameterAsString(AbstractDataResultSetReader.PARAMETER_DATE_FORMAT);
+		if (excelExampleSource.isParameterSet(ParameterTypeDateFormat.PARAMETER_DATE_FORMAT)) {
+			datePattern = excelExampleSource.getParameterAsString(ParameterTypeDateFormat.PARAMETER_DATE_FORMAT);
 		}
 
 		if (excelExampleSource.isParameterSet(AbstractDataResultSetReader.PARAMETER_TIME_ZONE)) {
@@ -154,7 +171,7 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 
 	/**
 	 * Creates an excel table model (either {@link ExcelSheetTableModel} or
-	 * {@link Excel2007SheetTableModel}, depending on file).
+	 * {@link XlsxSheetTableModel}, depending on file).
 	 *
 	 * @param sheetIndex
 	 *            the index of the sheet (0-based)
@@ -170,16 +187,42 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 	 */
 	public AbstractTableModel createExcelTableModel(int sheetIndex, XlsxReadMode readMode, ProgressListener progressListener)
 			throws BiffException, IOException, InvalidFormatException, OperatorException, ParseException {
+		return createExcelTableModel(ExcelSheetSelection.byIndex(sheetIndex), readMode, progressListener);
+	}
+
+	/**
+	 * Creates an excel table model (either {@link ExcelSheetTableModel} or
+	 * {@link XlsxSheetTableModel}, depending on file).
+	 *
+	 * @param sheetSelection
+	 *            the Sheet Selection method
+	 * @param readMode
+	 *            the read mode for {@link XlsxSheetTableModel} creation. It defines whether only a
+	 *            preview or the whole sheet content will be loaded
+	 * @param progressListener
+	 *            the progress listener to report progress to
+	 * @return
+	 * @throws BiffException
+	 * @throws IOException
+	 * @throws InvalidFormatException
+	 */
+	public AbstractTableModel createExcelTableModel(ExcelSheetSelection sheetSelection, XlsxReadMode readMode, ProgressListener progressListener)
+			throws BiffException, IOException, InvalidFormatException, OperatorException, ParseException {
 		if (getFile().getAbsolutePath().endsWith(XLSX_FILE_ENDING)) {
 			// excel 2007 file
-			return new XlsxSheetTableModel(this, sheetIndex, readMode, getFile().getAbsolutePath(), progressListener);
+			return new XlsxSheetTableModel(this, sheetSelection, readMode, getFile().getAbsolutePath(), progressListener);
 		} else {
 			// excel pre 2007 file
 			if (workbookJXL == null) {
 				createWorkbookJXL();
 			}
 			progressListener.setCompleted(50);
-			return new ExcelSheetTableModel(workbookJXL.getSheet(sheetIndex));
+
+			try {
+				return new ExcelSheetTableModel(sheetSelection.selectSheetFrom(workbookJXL));
+			} catch (ExcelSheetSelection.SheetNotFoundException e) {
+				throw new IOException(e);
+			}
 		}
 	}
 
@@ -295,6 +338,7 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 		rowLast = Integer.MAX_VALUE;
 		columnLast = Integer.MAX_VALUE;
 		sheet = 0;
+		sheetName = null;
 	}
 
 	/**
@@ -329,6 +373,38 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 		this.sheet = sheet;
 	}
 
+	/**
+	 * Requires {@link #setSheetSelectionMode(SheetSelectionMode)} to be set to {@code SheetSelectionMode.BY_NAME}
+	 * @param sheetName The sheetName to select
+	 */
+	public void setSheetByName(String sheetName) {
+		this.sheetName = sheetName;
+	}
+
+	/**
+	 * @return the current value of the sheetByName selection
+	 */
+	public String getSheetByName() {
+		return sheetName;
+	}
+
+	/**
+	 * Returns the currently selected sheet selection method
+	 *
+	 * @return
+	 */
+	public ExcelSheetSelection getSheetSelectionMethod() {
+		return sheetSelectionMode.getMethodFor(this);
+	}
+
+	public SheetSelectionMode getSheetSelectionMode() {
+		return sheetSelectionMode;
+	}
+
+	public void setSheetSelectionMode(SheetSelectionMode sheetSelectionMode) {
+		this.sheetSelectionMode = sheetSelectionMode;
+	}
+
 	public void setRowOffset(int rowOffset) {
 		this.rowOffset = rowOffset;
 	}
@@ -353,7 +429,7 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 	 *            the read mode
 	 * @param provider
 	 *            a {@link DateFormatProvider}, can be {@code null} in which case the date format is
-	 *            fixed by the current value of {@link configuration#getDatePattern()}
+	 *            fixed by the current value of {@link #getDatePattern()}
 	 * @return the created {@link DataResultSet}
 	 * @throws OperatorException
 	 *             in case the creation fails because of an invalid configuration
@@ -424,7 +500,7 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 
 	private XlsxResultSet createXLSXResultSet(Operator operator, XlsxReadMode readMode, DateFormatProvider provider)
 			throws UserError {
-		return new XlsxResultSet(operator, this, getSheet(), readMode, provider);
+		return new XlsxResultSet(operator, this, getSheetSelectionMethod(), readMode, provider);
 	}
 
 	/**
@@ -441,7 +517,7 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 		String absolutePath = file.getAbsolutePath();
 		if (absolutePath.endsWith(XLSX_FILE_ENDING)) {
 			try {
-				return createExcelTableModel(getSheet(), XlsxReadMode.WIZARD_PREVIEW, listener);
+				return createExcelTableModel(getSheetSelectionMethod(), XlsxReadMode.WIZARD_PREVIEW, listener);
 			} catch (BiffException | InvalidFormatException | IOException | ParseException e) {
 				throw new UserError(null, e, "xlsx_content_malformed");
 			}
@@ -471,7 +547,9 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 		}
 
 		source.setParameter(ExcelExampleSource.PARAMETER_IMPORTED_CELL_RANGE, range);
-		source.setParameter(PARAMETER_SHEET_NUMBER, String.valueOf(sheet + 1));
+		source.setParameter(ExcelExampleSource.PARAMETER_SHEET_SELECTION, String.valueOf(sheetSelectionMode.getIndex()));
+		source.setParameter(ExcelExampleSource.PARAMETER_SHEET_NUMBER, String.valueOf(sheet + 1));
+		source.setParameter(ExcelExampleSource.PARAMETER_SHEET_NAME, sheetName);
 		source.setParameter(ExcelExampleSource.PARAMETER_EXCEL_FILE, workbookFile.getAbsolutePath());
 	}
 
@@ -601,12 +679,82 @@ public class ExcelResultSetConfiguration implements DataResultSetFactory {
 	 */
 	public void storeConfiguration(Map<String, String> parameters) {
 		File file = getFile();
-		parameters.put("excel.fileLocation", file != null ? file.toString() : "");
-		parameters.put("excel.sheet", String.valueOf(getSheet()));
-		parameters.put("excel.rowOffset", String.valueOf(getRowOffset()));
-		parameters.put("excel.rowLast", String.valueOf(getRowLast()));
-		parameters.put("excel.columnOffset", String.valueOf(getColumnOffset()));
-		parameters.put("excel.columnLast", String.valueOf(getColumnLast()));
+		parameters.put(EXCEL_FILE_LOCATION, file != null ? file.toString() : "");
+		parameters.put(EXCEL_SHEET_SELECTION_MODE, String.valueOf(sheetSelectionMode));
+		parameters.put(EXCEL_SHEET, String.valueOf(getSheet()));
+		parameters.put(EXCEL_SHEET_NAME, String.valueOf(getSheetByName()));
+		parameters.put(EXCEL_ROW_OFFSET, String.valueOf(getRowOffset()));
+		parameters.put(EXCEL_ROW_LAST, String.valueOf(getRowLast()));
+		parameters.put(EXCEL_COLUMN_OFFSET, String.valueOf(getColumnOffset()));
+		parameters.put(EXCEL_COLUMN_LAST, String.valueOf(getColumnLast()));
 	}
 
+	@Override
+	public XlsxWorkbookParser.XlsxWorkbookSheet selectSheetFrom(List<XlsxWorkbookParser.XlsxWorkbookSheet> sheets) throws SheetNotFoundException {
+		return getSheetSelectionMethod().selectSheetFrom(sheets);
+	}
+
+	@Override
+	public jxl.Sheet selectSheetFrom(jxl.Workbook workbookJXL) throws SheetNotFoundException {
+		return getSheetSelectionMethod().selectSheetFrom(workbookJXL);
+	}
+
+	@Override
+	public org.apache.poi.ss.usermodel.Sheet selectSheetFrom(org.apache.poi.ss.usermodel.Workbook workbook) throws SheetNotFoundException {
+		return getSheetSelectionMethod().selectSheetFrom(workbook);
+	}
+
+	/**
+	 * A sheet can be selected by either it's name or it's index
+	 * <p>
+	 * After choosing a SelectionMode with {@link #setSheetSelectionMode(SheetSelectionMode)} use the methods {@link #setSheet(int)} or {@link #setSheetByName(String)} to specify the index or name.
+	 */
+	public enum SheetSelectionMode {
+		/** Selects a sheet by {@link #getSheet()} */
+		BY_INDEX(ExcelExampleSource.SHEET_SELECT_BY_INDEX, (ExcelResultSetConfiguration c) -> ExcelSheetSelection.byIndex(c.getSheet())),
+		/** Select a sheet by {@link #getSheetByName()} */
+		BY_NAME(ExcelExampleSource.SHEET_SELECT_BY_NAME, (ExcelResultSetConfiguration c) -> ExcelSheetSelection.byName(c.getSheetByName()));
+
+		private int index;
+		private Function<ExcelResultSetConfiguration, ExcelSheetSelection> selectionFunction;
+
+		SheetSelectionMode(int index, Function<ExcelResultSetConfiguration, ExcelSheetSelection> selectionFunction) {
+			this.index = index;
+			this.selectionFunction = selectionFunction;
+		}
+
+		/**
+		 * Returns the ExcelExampleSource position of the selected method
+		 *
+		 * @return
+		 */
+		public int getIndex() {
+			return index;
+		}
+
+		/**
+		 * Returns the selected selection method for the given configuration
+		 *
+		 * @param configuration
+		 * @return The selected sheet selection method
+		 */
+		public ExcelSheetSelection getMethodFor(ExcelResultSetConfiguration configuration) {
+			return selectionFunction.apply(configuration);
+		}
+
+		/**
+		 * Returns the SheetSelectionMode for the given position
+		 *
+		 * @param position
+		 * @return
+		 */
+		public static SheetSelectionMode get(int position) {
+			for (SheetSelectionMode mode : SheetSelectionMode.values()) {
+				if (mode.index == position) {
+					return mode;
+				}
+			}
+			throw new IllegalArgumentException("Could not find SheetSelectionMode at position " + position);
+		}
+	}
 }

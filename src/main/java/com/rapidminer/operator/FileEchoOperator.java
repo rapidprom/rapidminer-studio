@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  *
  * Complete list of developers available at our web site:
  *
@@ -96,6 +96,7 @@ public class FileEchoOperator extends Operator {
 		type = new ParameterTypeText(PARAMETER_TEXT, "The text which should be written into the file.", TextType.PLAIN,
 				false);
 		type.setExpert(false);
+		type.setPrimary(true);
 		types.add(type);
 		type = new ParameterTypeCategory(PARAMETER_MODE,
 				"The text insertion mode, replace any existing file content, or append the text to the end of the file.",

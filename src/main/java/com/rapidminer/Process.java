@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  *
  * Complete list of developers available at our web site:
  *
@@ -37,14 +37,13 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-
 import javax.swing.event.EventListenerList;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -58,6 +57,7 @@ import com.rapidminer.example.table.AttributeFactory;
 import com.rapidminer.gui.tools.ProgressThread;
 import com.rapidminer.gui.tools.ProgressThreadStoppedException;
 import com.rapidminer.io.process.XMLImporter;
+import com.rapidminer.io.process.XMLTools;
 import com.rapidminer.license.violation.LicenseViolation;
 import com.rapidminer.operator.Annotations;
 import com.rapidminer.operator.DebugMode;
@@ -105,6 +105,7 @@ import com.rapidminer.tools.Tools;
 import com.rapidminer.tools.WebServiceTools;
 import com.rapidminer.tools.WrapperLoggingHandler;
 import com.rapidminer.tools.XMLException;
+import com.rapidminer.tools.XMLParserException;
 import com.rapidminer.tools.container.Pair;
 import com.rapidminer.tools.usagestats.ActionStatisticsCollector;
 
@@ -175,7 +176,7 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 	private final List<BreakpointListener> breakpointListeners = Collections.synchronizedList(new LinkedList<>());
 
 	/** The list of filters called between each operator */
-	private final List<ProcessFlowFilter> processFlowFilters = Collections.synchronizedList(new LinkedList<>());
+	private final CopyOnWriteArrayList<ProcessFlowFilter> processFlowFilters = new CopyOnWriteArrayList<>();
 
 	/** The listeners for logging (data tables). */
 	private final List<LoggingListener> loggingListeners = Collections.synchronizedList(new LinkedList<>());
@@ -307,9 +308,10 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 	/** Reads an process configuration from the given URL. */
 	public Process(final URL url) throws IOException, XMLException {
 		initContext();
-		Reader in = new InputStreamReader(WebServiceTools.openStreamFromURL(url), getEncoding(null));
-		readProcess(in);
-		in.close();
+		try (Reader in = new InputStreamReader(WebServiceTools.openStreamFromURL(url), getEncoding(null))) {
+			readProcess(in);
+		}
+
 	}
 
 	protected Logger makeLogger() {
@@ -730,9 +732,7 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 		if (filter == null) {
 			throw new IllegalArgumentException("filter must not be null!");
 		}
-		if (!processFlowFilters.contains(filter)) {
-			processFlowFilters.add(filter);
-		}
+		processFlowFilters.addIfAbsent(filter);
 	}
 
 	/**
@@ -768,9 +768,13 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 		if (input == null) {
 			input = Collections.emptyList();
 		}
-		synchronized (processFlowFilters) {
-			for (ProcessFlowFilter filter : processFlowFilters) {
+		for (ProcessFlowFilter filter : processFlowFilters) {
+			try {
 				filter.preOperator(previousOperator, nextOperator, input);
+			} catch (OperatorException oe) {
+				throw oe;
+			} catch (Exception e) {
+				getLogger().log(Level.WARNING, "com.rapidminer.Process.process_flow_filter_failed", e);
 			}
 		}
 	}
@@ -796,9 +800,13 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 		if (output == null) {
 			output = Collections.emptyList();
 		}
-		synchronized (processFlowFilters) {
-			for (ProcessFlowFilter filter : processFlowFilters) {
+		for (ProcessFlowFilter filter : processFlowFilters) {
+			try {
 				filter.postOperator(previousOperator, nextOperator, output);
+			} catch (OperatorException oe) {
+				throw oe;
+			} catch (Exception e) {
+				getLogger().log(Level.WARNING, "com.rapidminer.Process.process_flow_filter_failed", e);
 			}
 		}
 	}
@@ -815,11 +823,8 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 		if (otherProcess == null) {
 			throw new IllegalArgumentException("otherProcess must not be null!");
 		}
-
-		synchronized (processFlowFilters) {
-			for (ProcessFlowFilter filter : processFlowFilters) {
-				otherProcess.addProcessFlowFilter(filter);
-			}
+		for (ProcessFlowFilter filter : processFlowFilters) {
+			otherProcess.addProcessFlowFilter(filter);
 		}
 	}
 
@@ -1192,7 +1197,7 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 	 */
 	public final IOContainer run(final IOContainer input, int logVerbosity, final Map<String, String> macroMap,
 			final boolean storeOutput) throws OperatorException {
-		ActionStatisticsCollector.getInstance().logExecutionStarted();
+		ActionStatisticsCollector.getInstance().logExecutionStarted(this);
 		try {
 			// make sure the process flow filter is registered
 			ProcessFlowFilter filter = ProcessFlowFilterRegistry.INSTANCE.getProcessFlowFilter();
@@ -1211,6 +1216,11 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 							true);
 					if (!licenseViolations.isEmpty()) {
 						throw new LicenseViolationException(op, licenseViolations);
+					}
+
+					// Check if the given operator is blacklisted
+					if (OperatorService.isOperatorBlacklisted(op.getOperatorDescription().getKey())) {
+						throw new UserError(op, "operator_blacklisted");
 					}
 
 					// as a side effect mark all enabled operators as dirty
@@ -1322,7 +1332,7 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 				getLogger().log(Level.INFO, () -> "Process finished successfully after " + Tools.formatDuration(end - start));
 			}
 
-			ActionStatisticsCollector.getInstance().logExecutionSuccess();
+			ActionStatisticsCollector.getInstance().logExecutionSuccess(this);
 
 			return result;
 		} catch (ProcessStoppedException e) {
@@ -1502,7 +1512,7 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 			progressListener.setCompleted(0);
 		}
 		try {
-			Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new InputSource(in));
+			Document document = XMLTools.createDocumentBuilder().parse(new InputSource(in));
 			if (progressListener != null) {
 				progressListener.setCompleted(20);
 			}
@@ -1512,7 +1522,7 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 
 			nameMapBackup = operatorNameMap;
 			rootOperator.clear(Port.CLEAR_ALL);
-		} catch (javax.xml.parsers.ParserConfigurationException e) {
+		} catch (XMLParserException e) {
 			throw new XMLException(e.toString(), e);
 		} catch (SAXException e) {
 			throw new XMLException("Cannot parse document: " + e.getMessage(), e);
@@ -1707,9 +1717,26 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 
 	// process location (file/repository)
 
-	/** Returns true iff either a file or a repository location is defined. */
+	/**
+	 * Returns if the process has a valid save location.
+	 *
+	 * @return {@code true} iff either a file location is defined or a repository location is defined AND the repository
+	 * is not read-only; {@code false} otherwise
+	 */
 	public boolean hasSaveDestination() {
-		return processLocation != null;
+		if (processLocation == null) {
+			return false;
+		}
+		if (processLocation instanceof RepositoryProcessLocation) {
+			RepositoryProcessLocation repoProcLoc = (RepositoryProcessLocation) processLocation;
+			try {
+				return !repoProcLoc.getRepositoryLocation().getRepository().isReadOnly();
+			} catch (RepositoryException e) {
+				return false;
+			}
+		} else {
+			return true;
+		}
 	}
 
 	/**
@@ -1842,6 +1869,36 @@ public class Process extends AbstractObservable<Process> implements Cloneable {
 				throw new Exception(
 						"The process contains dummy operators. Remove all dummy operators or install all missing extensions in order to save the process.");
 			}
+		}
+	}
+
+	/**
+	 * Checks if breakpoints are present in this process.
+	 *
+	 * @return {@code true}  if a breakpoint is present. {@code false}  otherwise
+	 * @author Joao Pedro Pinheiro
+	 * @since 8.2.0
+	 */
+	public boolean hasBreakpoints() {
+		for (Operator op: getAllOperators()) {
+			if (op.hasBreakpoint()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Removes all breakpoints from the current process
+	 *
+	 * @author Joao Pedro Pinheiro
+	 * @since 8.2.0
+	 */
+	public void removeAllBreakpoints() {
+		for (Operator op: getAllOperators()) {
+			op.setBreakpoint(BreakpointListener.BREAKPOINT_BEFORE, false);
+			op.setBreakpoint(BreakpointListener.BREAKPOINT_AFTER, false);
 		}
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -213,5 +213,10 @@ public class DateFormatValueCellEditor extends AbstractCellEditor implements Pro
 	@Override
 	public Object getCellEditorValue() {
 		return formatCombo.getSelectedItem();
+	}
+
+	@Override
+	public void activate() {
+		selectButton.doClick();
 	}
 }

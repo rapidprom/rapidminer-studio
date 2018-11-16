@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -27,6 +27,7 @@ import com.rapidminer.RapidMiner;
 import com.rapidminer.gui.RapidMinerGUI;
 import com.rapidminer.gui.dialog.EULADialog;
 import com.rapidminer.gui.tools.ProgressThread;
+import com.rapidminer.settings.Telemetry;
 import com.rapidminer.tools.I18N;
 import com.rapidminer.tools.LogService;
 import com.rapidminer.tools.ParameterService;
@@ -61,6 +62,9 @@ public final class UsageStatsScheduler  {
 
 	/** Starts the first timer. */
 	public static void init() {
+		if (Telemetry.USAGESTATS.isDenied()) {
+			return;
+		}
 		ParameterService.registerParameterChangeListener(new ParameterChangeListener() {
 			@Override
 			public void informParameterChanged(String key, String value) {
@@ -127,6 +131,9 @@ public final class UsageStatsScheduler  {
 	}
 
 	private static synchronized void transmit(UsageStatistics.Reason reason, boolean wait) {
+		if (Telemetry.USAGESTATS.isDenied()) {
+			return;
+		}
 		ActionStatisticsCollector.ActionStatisticsSnapshot snapshot = ActionStatisticsCollector.getInstance().getActionStatisticsSnapshot(true);
 		if (UsageStatsTransmissionDialog.askForTransmission(snapshot)) {
 			stopTimer();
@@ -193,6 +200,7 @@ public final class UsageStatsScheduler  {
 				stopTimer();
 				timerDate = timeToFire;
 				timer = new Timer("UsageStatTimer", true);
+				UsageStatistics.getInstance().setNextTransmission(timeToFire);
 				timer.schedule(new TimerTask() {
 
 					@Override
@@ -201,7 +209,6 @@ public final class UsageStatsScheduler  {
 					}
 
 				}, timerDate);
-				UsageStatistics.getInstance().setNextTransmission(timeToFire);
 			}
 		}
 
@@ -216,9 +223,16 @@ public final class UsageStatsScheduler  {
 	 * the EDT.
 	 */
 	public static void transmitOnShutdown() {
+		if (Telemetry.USAGESTATS.isDenied()) {
+			return;
+		}
+
 		stopTimer();
 
 		if (shouldTransmitOnShutdown()) {
+			if (UsageStatistics.getInstance().getNextTransmission() == null) {
+				UsageStatistics.getInstance().setNextTransmission(getTransmissionDate(UsageStatistics.Reason.SHUTDOWN));
+			}
 			transmit(UsageStatistics.Reason.SHUTDOWN, true);
 			UsageStatistics.getInstance().save();
 		}

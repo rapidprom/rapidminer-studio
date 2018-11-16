@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -18,6 +18,8 @@
 */
 package com.rapidminer.operator.io;
 
+import java.util.List;
+
 import com.rapidminer.operator.IOObject;
 import com.rapidminer.operator.OperatorDescription;
 import com.rapidminer.operator.OperatorException;
@@ -27,8 +29,6 @@ import com.rapidminer.parameter.ParameterTypeRepositoryLocation;
 import com.rapidminer.repository.RepositoryException;
 import com.rapidminer.repository.RepositoryLocation;
 import com.rapidminer.repository.RepositoryManager;
-
-import java.util.List;
 
 
 /**
@@ -61,6 +61,7 @@ public class RepositoryStorer extends AbstractWriter<IOObject> {
 		ParameterTypeRepositoryLocation type = new ParameterTypeRepositoryLocation(PARAMETER_REPOSITORY_ENTRY,
 				"Repository entry.", true, false, false, false, true, true);
 		type.setExpert(false);
+		type.setPrimary(true);
 		types.add(type);
 		return types;
 	}

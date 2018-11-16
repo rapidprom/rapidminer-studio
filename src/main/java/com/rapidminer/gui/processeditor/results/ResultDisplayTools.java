@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -36,6 +36,7 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
+import com.rapidminer.adaption.belt.TableViewingTools;
 import com.rapidminer.core.license.ProductConstraintManager;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.example.set.MappedExampleSet;
@@ -116,6 +117,7 @@ public class ResultDisplayTools {
 	 */
 	public static JPanel createVisualizationComponent(IOObject result, final IOContainer resultContainer,
 			String usedResultName, final boolean showCards) {
+		result = TableViewingTools.replaceTable(result);
 		final String resultName = RendererService.getName(result.getClass());
 		ButtonBarCardPanel visualisationComponent;
 		Collection<Renderer> renderers = RendererService.getRenderers(resultName);

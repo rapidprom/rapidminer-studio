@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -89,9 +89,9 @@ public class DetachedDockViewAsTab extends DockViewAsTab {
 			SmartIconJButton[] iconsArray = icons.toArray(new SmartIconJButton[0]);
 			smartIcon = new JTabbedPaneSmartIcon(dockKey.getIcon(), dockKey.getName(), null, null, true, iconsArray);
 			smartIcon.setIconForTabbedPane(tabHeader);
-			tabHeader.addTab("", smartIcon, getDockable().getComponent());
+			tabHeader.addTab("", smartIcon, getDockable().getComponent(), dockKey.getTooltip());
 		} else {
-			tabHeader.addTab(dockKey.getName(), dockKey.getIcon(), getDockable().getComponent());
+			tabHeader.addTab(dockKey.getName(), dockKey.getIcon(), getDockable().getComponent(), dockKey.getTooltip());
 		}
 
 	}
@@ -149,7 +149,6 @@ public class DetachedDockViewAsTab extends DockViewAsTab {
 				((DockDragEvent) event).acceptDrag(lastDropGeneralPath);
 			} else {
 				GeneralPath path = buildPathForTab(bounds);
-				;
 				lastDropShape = r2d;
 				lastDropGeneralPath = path;
 				((DockDragEvent) event).acceptDrag(lastDropGeneralPath);

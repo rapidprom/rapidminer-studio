@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -90,6 +90,9 @@ public class AttributeMetaData implements Serializable {
 			int maxValues = shortened ? getMaximumNumberOfNominalValues() : Integer.MAX_VALUE;
 			valueSet.clear();
 			for (String value : att.getMapping().getValues()) {
+				if (value == null) {
+					continue;
+				}
 				if (shortened && value.length() > 100) {
 					value = value.substring(0, 100);
 				}

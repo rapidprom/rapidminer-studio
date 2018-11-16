@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -153,6 +153,7 @@ public class SendMailOperator extends Operator {
 		ParameterType type = new ParameterTypeText(PARAMETER_BODY_PLAIN, "Body of the email.", TextType.PLAIN, true);
 		type.registerDependencyCondition(new BooleanParameterCondition(this, PARAMETER_USE_HTML, true, false));
 		type.setExpert(false);
+		type.setPrimary(true);
 		types.add(type);
 
 		ParameterTypeText typeText = new ParameterTypeText(PARAMETER_BODY_HTML, "Body of the email in HTML format.",

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -21,6 +21,9 @@ package com.rapidminer.repository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.AccessControlException;
+import java.security.AccessController;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -29,15 +32,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.event.EventListenerList;
 
 import com.rapidminer.RapidMiner;
 import com.rapidminer.gui.tools.RepositoryGuiTools;
+import com.rapidminer.io.process.ProcessOriginProcessXMLFilter.ProcessOriginState;
 import com.rapidminer.operator.IOObject;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.repository.internal.db.DBRepository;
 import com.rapidminer.repository.internal.remote.RemoteRepository;
 import com.rapidminer.repository.local.LocalRepository;
+import com.rapidminer.repository.resource.ResourceFolder;
 import com.rapidminer.repository.resource.ResourceRepository;
+import com.rapidminer.repository.search.RepositoryGlobalSearch;
+import com.rapidminer.security.PluginSandboxPolicy;
 import com.rapidminer.tools.AbstractObservable;
 import com.rapidminer.tools.I18N;
 import com.rapidminer.tools.LogService;
@@ -61,18 +69,36 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 
 	public static final String SAMPLE_REPOSITORY_NAME = "Samples";
 
+	/** @since 9.0 */
+	static final List<String> SPECIAL_RESOURCE_REPOSITORY_NAMES = new ArrayList<>();
+	static {
+		SPECIAL_RESOURCE_REPOSITORY_NAMES.add(SAMPLE_REPOSITORY_NAME);
+	}
+	/** @since 9.0.0 */
+	private static final Map<String, ProcessOriginState> REPOSITORY_ORIGINS = new HashMap<>();
+
 	private static final Logger LOGGER = LogService.getRoot();
+	/** @since 9.0 */
+	private static final String LOG_SAMPLES_PREFIX = "com.rapidminer.sample_repository.";
+	/** @since 9.0 */
+	private static final String LOG_IGNORE_FOLDER_PREFIX = LOG_SAMPLES_PREFIX + "ignore_folder.";
+	/** @since 9.0 */
+	private static final String LOG_REGISTER_ERROR_PREFIX  = LOG_SAMPLES_PREFIX + "register_error.";
 
 	private static RepositoryManager instance;
 	private static final Object INSTANCE_LOCK = new Object();
 	private static Repository sampleRepository;
 	private static final Map<RepositoryAccessor, RepositoryManager> CACHED_MANAGERS = new HashMap<>();
 	private static final List<RepositoryFactory> FACTORIES = new LinkedList<>();
-	private static final int DEFAULT_TOTAL_PROGRESS = 100000;
+	private static final int DEFAULT_TOTAL_PROGRESS = 100_000;
+	/** @since 9.0 */
+	private static final Map<String, String> extensionFolders = new HashMap<>();
 
 	private static RepositoryProvider provider = new FileRepositoryProvider();
 
 	private final List<Repository> repositories = new LinkedList<>();
+
+	private final EventListenerList listeners = new EventListenerList();
 
 	/**
 	 * listener which reacts on repository changes like renaming and sorts the list of repositories
@@ -96,17 +122,18 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 		public void entryAdded(Entry newEntry, Folder parent) {}
 	};
 
+
 	/**
 	 * Ordered types of {@link Repository}s
 	 *
 	 * @author Sabrina Kirstein
 	 *
 	 */
-	public static enum RepositoryType {
+	public enum RepositoryType {
 
 		/**
 		 * The order of repository types is very important as it is used in the
-		 * {@link RepositoryManager#repositoryComparator}
+		 * {@link RepositoryTools#REPOSITORY_COMPARATOR}
 		 */
 		RESOURCES, DB, LOCAL, REMOTE, OTHER;
 
@@ -124,13 +151,15 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 				return DB;
 			} else if (repo instanceof LocalRepository) {
 				return LOCAL;
+			} else if (repo instanceof ConnectionRepository && SPECIAL_RESOURCE_REPOSITORY_NAMES.contains(repo.getName())) {
+				return RESOURCES;
 			} else if (repo instanceof RemoteRepository) {
 				return REMOTE;
 			} else {
 				return OTHER;
 			}
 		}
-	};
+	}
 
 	public static RepositoryManager getInstance(RepositoryAccessor repositoryAccessor) {
 		synchronized (INSTANCE_LOCK) {
@@ -166,18 +195,46 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 
 	private RepositoryManager() {
 		if (sampleRepository == null) {
-			sampleRepository = new ResourceRepository(SAMPLE_REPOSITORY_NAME, "samples");
+			sampleRepository = new ResourceRepository(SAMPLE_REPOSITORY_NAME, "samples") {
+
+				@Override
+				protected void ensureLoaded(List<Folder> folders, List<DataEntry> data) throws RepositoryException {
+					super.ensureLoaded(folders, data);
+					extensionFolders.forEach((n, e) -> {
+						if (folders.stream().anyMatch(f -> f.getName().equals(n))) {
+							LOGGER.log(Level.INFO, LOG_IGNORE_FOLDER_PREFIX + "already_present", n);
+							return;
+						}
+						ResourceFolder folder = new ResourceFolder(this, n, "/" + n, this);
+						try {
+							if (folder.getDataEntries().isEmpty() && folder.getSubfolders().isEmpty()) {
+								LOGGER.log(Level.INFO, LOG_IGNORE_FOLDER_PREFIX + "no_content", n);
+								return;
+							}
+						} catch (RepositoryException re) {
+							LOGGER.log(Level.INFO, LOG_IGNORE_FOLDER_PREFIX + "error", new Object[]{n, re.getMessage()});
+							return;
+						}
+						folders.add(folder);
+					});
+				}
+			};
 		}
 		repositories.add(sampleRepository);
+		fireRepositoryWasAdded(sampleRepository);
 		sortRepositories();
+
 
 		// only load local repositories, custom repositories will be loaded after initialization
 		load(LocalRepository.class);
 	}
 
+	@SuppressWarnings("unchecked")
 	public static void init() {
 		synchronized (INSTANCE_LOCK) {
 			instance = new RepositoryManager();
+			// initialize Repository Global Search
+			new RepositoryGlobalSearch();
 			instance.postInstall();
 		}
 	}
@@ -193,13 +250,25 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 
 		// only call the load method if custom repositories have been found. Otherwise all
 		// repositories would be loaded twice when providing an empty list.
-		if (customRepoClasses.size() > 0) {
-			instance.load(customRepoClasses.toArray(new Class[customRepoClasses.size()]));
+		if (!customRepoClasses.isEmpty()) {
+			instance.load(customRepoClasses.toArray(new Class[0]));
 		}
 	}
 
 	/**
-	 * Replaces the used {@link RepositoryProvider}. The {@link DefaultRepositoryProvider} will be
+	 * Refreshes the sample repository. Will be called by
+	 * {@link RapidMiner#init()} after {@link Plugin#initAll()} and {@link RepositoryManager#init()}
+	 */
+	public static void refreshSampleRepository() {
+		try {
+			sampleRepository.refresh();
+		} catch (Exception e) {
+			LOGGER.log(Level.INFO, "com.rapidminer.repository.RepositoryManager.sample_repository_refresh_failed", e);
+		}
+	}
+
+	/**
+	 * Replaces the used {@link RepositoryProvider}. The {@link FileRepositoryProvider} will be
 	 * used as default.
 	 *
 	 * @param repositoryProvider
@@ -212,6 +281,9 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 	private void postInstall() {
 		for (Repository repository : getRepositories()) {
 			repository.postInstall();
+
+			// the original firings were during init phase of the RepositoryManager, nobody could have listened yet. Fire again
+			fireRepositoryWasAdded(repository);
 		}
 	}
 
@@ -219,6 +291,36 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 		synchronized (INSTANCE_LOCK) {
 			FACTORIES.add(factory);
 		}
+	}
+
+	/**
+	 * Adds the given listener to be notified of repository additions and removals.
+	 *
+	 * @param l
+	 * 		the listener, must not be {@code null}
+	 * @since 8.1
+	 */
+	public void addRepositoryManagerListener(RepositoryManagerListener l) {
+		if (l == null) {
+			throw new IllegalArgumentException("l must not be null!");
+		}
+
+		listeners.add(RepositoryManagerListener.class, l);
+	}
+
+	/**
+	 * Removes the given listener.
+	 *
+	 * @param l
+	 * 		the listener, must not be {@code null}
+	 * @since 8.1
+	 */
+	public void removeRepositoryManagerListener(RepositoryManagerListener l) {
+		if (l == null) {
+			throw new IllegalArgumentException("l must not be null!");
+		}
+
+		listeners.remove(RepositoryManagerListener.class, l);
 	}
 
 	/**
@@ -230,6 +332,17 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 		LOGGER.config("Adding repository " + repository.getName());
 		repositories.add(repository);
 		repository.addRepositoryListener(repositoryListener);
+
+		if (instance != null) {
+			save();
+		}
+		sortRepositories();
+
+		// observer is kept for legacy reasons
+		fireUpdate(repository);
+		// since 8.1, this is the new way to detect changes to the repository manager
+		fireRepositoryWasAdded(repository);
+
 		if (instance != null) {
 			// we cannot call post install during init(). The reason is that
 			// post install may access RepositoryManager.getInstance() which will be null and hence
@@ -237,8 +350,103 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 			repository.postInstall();
 			save();
 		}
-		sortRepositories();
-		fireUpdate(repository);
+	}
+
+	/**
+	 * Add a repository as a special resource repository. It will be sorted to the end.
+	 *
+	 * <strong>Note:</strong> only signed extensions can call this method outside the core!
+	 *
+	 * @param repository
+	 * 		the repository to add
+	 * @see #addSpecialRepository(Repository, String, String)
+	 * @since 9.0.0
+	 */
+	public void addSpecialRepository(Repository repository) {
+		addSpecialRepository(repository, null, null);
+	}
+
+	/**
+	 * Add a repository as a special resource repository. The ordering is determined by the {@code before} or {@code after}
+	 * parameters. Only one should not be {@code null}. If both are {@code null} or not {@code null}, or if the referenced name can not be found, the new repository
+	 * will simply be sorted to the end.
+	 * <p>
+	 * <strong>Note:</strong> only signed extensions can call this method outside the core!
+	 *
+	 * @param repository
+	 * 		the repository to add
+	 * @param before
+	 * 		the name of the repository the new repository should be inserted in front of; can be {@code null}
+	 * @param after
+	 * 		the name of the repository the new repository should be inserted after; can be {@code null}
+	 * @since 9.0.0
+	 */
+	public void addSpecialRepository(Repository repository, String before, String after) {
+		try {
+			// only signed extensions are allowed to add special repositories
+			if (System.getSecurityManager() != null) {
+				AccessController.checkPermission(new RuntimePermission(PluginSandboxPolicy.RAPIDMINER_INTERNAL_PERMISSION));
+			}
+		} catch (AccessControlException e) {
+			return;
+		}
+		int insertionIndex = -1;
+		if (before == null && after != null) {
+			insertionIndex = SPECIAL_RESOURCE_REPOSITORY_NAMES.indexOf(after);
+			// sort to end (-1) or after the actual position
+			if (insertionIndex != -1) {
+				insertionIndex++;
+			}
+		} else if (after == null && before != null) {
+			// insert at that specific index; sorted to the end automatically if reference point not found
+			insertionIndex = SPECIAL_RESOURCE_REPOSITORY_NAMES.indexOf(before);
+		}
+		if (insertionIndex == -1) {
+			SPECIAL_RESOURCE_REPOSITORY_NAMES.add(repository.getName());
+		} else {
+			SPECIAL_RESOURCE_REPOSITORY_NAMES.add(insertionIndex, repository.getName());
+		}
+		addRepository(repository);
+	}
+
+	/**
+	 * Add an {@link ProcessOriginState origin} to the given repository. It has to be a special repository added with
+	 * {@link #addSpecialRepository(Repository, String, String)}.
+	 *
+	 * @param repository
+	 * 		the special repository to add an origin to
+	 * @param origin
+	 * 		the origin state of the repository
+	 * @since 9.0.0
+	 */
+	public void setSpecialRepositoryOrigin(Repository repository, ProcessOriginState origin) {
+		try {
+			// only signed extensions are allowed to add origins to special repositories
+			if (System.getSecurityManager() != null) {
+				AccessController.checkPermission(new RuntimePermission(PluginSandboxPolicy.RAPIDMINER_INTERNAL_PERMISSION));
+			}
+		} catch (AccessControlException e) {
+			return;
+		}
+		// only special repos can have an origin, and null origins are not allowed
+		String name = repository.getName();
+		if (origin == null || !SPECIAL_RESOURCE_REPOSITORY_NAMES.contains(name)) {
+			return;
+		}
+		REPOSITORY_ORIGINS.put(name, origin);
+	}
+
+	/**
+	 * Returns the origin of the given repository if it was registered.
+	 *
+	 * @param repository
+	 * 		the repository whose origin should be looked up
+	 * @return the origin state of the repository or {@code null}
+	 * @see #setSpecialRepositoryOrigin(Repository, ProcessOriginState)
+	 * @since 9.0.0
+	 */
+	public ProcessOriginState getSpecialRepositoryOrigin(Repository repository) {
+		return REPOSITORY_ORIGINS.get(repository.getName());
 	}
 
 	/**
@@ -250,7 +458,11 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 		repository.preRemove();
 		repository.removeRepositoryListener(repositoryListener);
 		repositories.remove(repository);
+
+		// observer is kept for legacy reasons
 		fireUpdate(null);
+		// since 8.1, this is the new way to detect changes to the repository manager
+		fireRepositoryWasRemoved(repository);
 	}
 
 	public List<Repository> getRepositories() {
@@ -339,7 +551,7 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 	 * will stores the settings to a XML file. Use {@link #setProvider(RepositoryProvider)} to
 	 * replace this behavior.
 	 *
-	 * @see #load()
+	 * @see #load
 	 */
 	public void save() {
 		provider.save(getRepositories());
@@ -659,7 +871,7 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 		if (path.startsWith("" + RepositoryLocation.SEPARATOR)) {
 			path = path.substring(1);
 		}
-		if (path.equals("")) {
+		if (path.trim().isEmpty()) {
 			return repository;
 		}
 		String[] splitted = path.split("" + RepositoryLocation.SEPARATOR);
@@ -681,7 +893,7 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 						}
 					}
 					// missed entry -> refresh and try again
-					if (folder.canRefreshChild(splitted[index])) {
+					if (retryCount == 0 && folder.canRefreshChild(splitted[index])) {
 						folder.refresh();
 					} else {
 						break;
@@ -706,7 +918,7 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 						break;
 					} else {
 						// missed entry -> refresh and try again
-						if (folder.canRefreshChild(splitted[index])) {
+						if (retryCount == 0 && folder.canRefreshChild(splitted[index])) {
 							folder.refresh();
 						} else {
 							break;
@@ -726,6 +938,62 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 	/** Returns the repository containing the RapidMiner sample processes. */
 	public Repository getSampleRepository() {
 		return sampleRepository;
+	}
+
+	/**
+	 * Registers the given folder name for the specified extension ID in the samples folder.
+	 * The folder name has to be a directory in the extensions {@code com.rapidminer.resources.samples} resource package
+	 * and must not contain any "/" or "\". Also it must abide by the general {@link ResourceFolder} rules, i.e there must
+	 * be a {@code CONTENTS} file listing the valid contents. The registered folder name is ignored if it is empty or could
+	 * not be properly read.
+	 * <p>
+	 * <strong>Note:</strong> Make sure that {@link #refreshSampleRepository()} is called after registering a new sample folder.
+	 * This is not necessary for extensions that add folders during initialization.
+	 *
+	 * @param extensionID
+	 * 		the ID of the registering extension
+	 * @param folderName
+	 * 		the folder name to be registered
+	 * @see #unregisterExtensionSamples(String, String)
+	 * @since 9.0
+	 */
+	public static void registerExtensionSamples(String extensionID, String folderName) {
+		if (folderName.contains("/") || folderName.contains("\\")) {
+			LOGGER.log(Level.WARNING, LOG_REGISTER_ERROR_PREFIX + "file_separator", folderName);
+			return;
+		}
+		if (extensionFolders.containsKey(folderName)) {
+			LOGGER.log(Level.WARNING, LOG_REGISTER_ERROR_PREFIX + "already_registered", folderName);
+			return;
+		}
+		extensionFolders.put(folderName, extensionID);
+		LOGGER.log(Level.INFO, LOG_SAMPLES_PREFIX + "register.success", folderName);
+	}
+
+	/**
+	 * Unregisters the given folder name from the samples folder. This will not succeed if the calling extension is not
+	 * the same as the registering extension.
+	 * <p>
+	 * <strong>Note:</strong> Make sure that {@link #refreshSampleRepository()} is called after unregistering a sample folder.
+	 *
+	 * @param extensionID
+	 * 		the ID of the registering extension
+	 * @param folderName
+	 * 		the folder name to be unregistered
+	 * @see #registerExtensionSamples(String, String)
+	 * @since 9.0
+	 */
+	public static void unregisterExtensionSamples(String extensionID, String folderName) {
+		String registeredExtension = extensionFolders.get(folderName);
+		if (registeredExtension == null) {
+			return;
+		}
+		if (!registeredExtension.equals(extensionID)) {
+			LOGGER.log(Level.WARNING, LOG_SAMPLES_PREFIX + "unregister_error.other_extension", folderName);
+			return;
+		}
+		extensionFolders.remove(folderName);
+		LOGGER.log(Level.INFO, LOG_SAMPLES_PREFIX + "unregister.success", folderName);
 	}
 
 	/**
@@ -776,5 +1044,30 @@ public class RepositoryManager extends AbstractObservable<Repository> {
 	 */
 	private void sortRepositories() {
 		Collections.sort(repositories, RepositoryTools.REPOSITORY_COMPARATOR);
+	}
+
+
+	/**
+	 * Notifies all {@link RepositoryManagerListener}s that a repository was added to this manager.
+	 *
+	 * @param repository
+	 * 		the added repository
+	 */
+	private void fireRepositoryWasAdded(Repository repository) {
+		for (RepositoryManagerListener l : listeners.getListeners(RepositoryManagerListener.class)) {
+			l.repositoryWasAdded(repository);
+		}
+	}
+
+	/**
+	 * Notifies all {@link RepositoryManagerListener}s that a repository will be removed from this manager.
+	 *
+	 * @param repository
+	 * 		the removed repository
+	 */
+	private void fireRepositoryWasRemoved(Repository repository) {
+		for (RepositoryManagerListener l : listeners.getListeners(RepositoryManagerListener.class)) {
+			l.repositoryWasRemoved(repository);
+		}
 	}
 }

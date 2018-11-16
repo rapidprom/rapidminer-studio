@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -96,7 +96,7 @@ public class ProcessLogTab extends JPanel implements Dockable {
 	}
 
 	public DataTable getDataTable() {
-		if (this.viewer != null && viewer instanceof DataTableViewer) {
+		if (viewer instanceof DataTableViewer) {
 			return ((DataTableViewer) this.viewer).getDataTable();
 		} else {
 			return null;

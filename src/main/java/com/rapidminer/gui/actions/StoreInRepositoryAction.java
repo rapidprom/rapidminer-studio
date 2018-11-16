@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -58,7 +58,7 @@ public class StoreInRepositoryAction extends ResourceAction {
 
 	@Override
 	public void loggedActionPerformed(ActionEvent e) {
-		String loc = RepositoryLocationChooser.selectLocation(lastLocation, "", RapidMinerGUI.getMainFrame(), true, false,
+		String loc = RepositoryLocationChooser.selectLocation(lastLocation, "", RapidMinerGUI.getMainFrame().getExtensionsMenu(), true, false,
 				true, true, true);
 		if (loc != null) {
 			RepositoryLocation location;

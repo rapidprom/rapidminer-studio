@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -18,7 +18,9 @@
 */
 package com.rapidminer.operator.visualization.dependencies;
 
-import Jama.Matrix;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+
 import com.rapidminer.datatable.DataTable;
 import com.rapidminer.datatable.DataTablePairwiseMatrixExtractionAdapter;
 import com.rapidminer.datatable.DataTableSymmetricalMatrixAdapter;
@@ -27,7 +29,7 @@ import com.rapidminer.example.ExampleSet;
 import com.rapidminer.operator.ResultObjectAdapter;
 import com.rapidminer.tools.Tools;
 
-import java.text.NumberFormat;
+import Jama.Matrix;
 
 
 /**
@@ -48,7 +50,7 @@ public class NumericalMatrix extends ResultObjectAdapter {
 
 	private String[] rowNames;
 
-	private NumberFormat formatter;
+	private DecimalFormat formatter;
 
 	private String name;
 
@@ -58,15 +60,24 @@ public class NumericalMatrix extends ResultObjectAdapter {
 
 	private String secondAttributeName = "Second Attribute";
 
+	private boolean isUseless;
+
 	public NumericalMatrix(String name, String[] columnNames, boolean symmetrical) {
 		this(name, columnNames, new Matrix(columnNames.length, columnNames.length), symmetrical);
 	}
 
-	public NumericalMatrix(String name, String[] columnNames, Matrix matrix, boolean symmetrical) {
-		this.name = name;
-		formatter = NumberFormat.getInstance();
+	private NumericalMatrix() {
+		formatter = new DecimalFormat();
+		DecimalFormatSymbols decimalFormatSymbols = new DecimalFormatSymbols();
+		decimalFormatSymbols.setNaN("?");
+		formatter.setDecimalFormatSymbols(decimalFormatSymbols);
 		formatter.setMaximumFractionDigits(3);
 		formatter.setMinimumFractionDigits(3);
+	}
+
+	public NumericalMatrix(String name, String[] columnNames, Matrix matrix, boolean symmetrical) {
+		this();
+		this.name = name;
 		this.columnNames = columnNames;
 		this.rowNames = columnNames;
 		this.matrix = matrix;
@@ -74,10 +85,8 @@ public class NumericalMatrix extends ResultObjectAdapter {
 	}
 
 	public NumericalMatrix(String name, String[] rowNames, String[] columnNames, Matrix matrix) {
+		this();
 		this.name = name;
-		formatter = NumberFormat.getInstance();
-		formatter.setMaximumFractionDigits(3);
-		formatter.setMinimumFractionDigits(3);
 		this.rowNames = rowNames;
 		this.columnNames = columnNames;
 		this.matrix = matrix;
@@ -141,6 +150,23 @@ public class NumericalMatrix extends ResultObjectAdapter {
 		return name + " Matrix";
 	}
 
+	/**
+	 * @return whether the "useless" flag was set
+	 * @since 8.2
+	 */
+	public boolean isUseless() {
+		return isUseless;
+	}
+
+	/**
+	 * Sets the "useless" flag for this matrix.
+	 *
+	 * @since 8.2
+	 */
+	public void setUseless(boolean useless) {
+		isUseless = useless;
+	}
+
 	public DataTable createMatrixDataTable() {
 		return new DataTableSymmetricalMatrixAdapter(this, this.name, this.columnNames);
 	}
@@ -173,7 +199,7 @@ public class NumericalMatrix extends ResultObjectAdapter {
 
 	@Override
 	public String toString() {
-		StringBuffer result = new StringBuffer(name + " Matrix (" + matrix.getRowDimension() + " rows, "
+		StringBuilder result = new StringBuilder(name + " Matrix (" + matrix.getRowDimension() + " rows, "
 				+ matrix.getColumnDimension() + " columns):" + Tools.getLineSeparator());
 		for (int i = 0; i < columnNames.length; i++) {
 			if (i < MAX_NUMBER_OF_RESULT_STRING_ATTRIBUTES) {
@@ -202,4 +228,5 @@ public class NumericalMatrix extends ResultObjectAdapter {
 		}
 		return result.toString();
 	}
+
 }

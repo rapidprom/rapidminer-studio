@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.WeakHashMap;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -42,12 +43,15 @@ import org.w3c.dom.Element;
 import com.rapidminer.io.process.XMLTools;
 import com.rapidminer.parameter.ParameterHandler;
 import com.rapidminer.parameter.ParameterType;
+import com.rapidminer.repository.ConnectionListener;
+import com.rapidminer.repository.ConnectionRepository;
 import com.rapidminer.repository.Folder;
 import com.rapidminer.repository.Repository;
 import com.rapidminer.repository.RepositoryAccessor;
+import com.rapidminer.repository.RepositoryException;
 import com.rapidminer.repository.RepositoryListener;
 import com.rapidminer.repository.RepositoryManager;
-import com.rapidminer.repository.internal.remote.ConnectionListener;
+import com.rapidminer.repository.RepositoryManagerListener;
 import com.rapidminer.repository.internal.remote.RemoteRepository;
 import com.rapidminer.tools.I18N;
 import com.rapidminer.tools.LogService;
@@ -106,18 +110,15 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	/**
 	 * Check if the Configurable is accessible by the current user
 	 */
-	private Predicate<Configurable> isAccessible = new Predicate<Configurable>() {
-		@Override
-		public boolean test(Configurable configurable) {
-			try {
-				checkAccess(configurable.getTypeId(), configurable.getName(), null);
-				return true;
-			} catch (ConfigurationException e) {
-				return false;
-			}
+	private Predicate<Configurable> isAccessible = configurable -> {
+		try {
+			checkAccess(configurable.getTypeId(), configurable.getName(), null);
+			return true;
+		} catch (ConfigurationException e) {
+			return false;
 		}
 	};
-
+	
 	/**
 	 * Compares {@link Configurable}s.
 	 */
@@ -142,6 +143,7 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 			}
 			return o1.getName().compareTo(o2.getName());
 		}
+
 	}
 
 	/**
@@ -165,7 +167,7 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	public static final String RM_SERVER_CONFIGURATION_URL_PREFIX = "/api/rest/configuration/";
 
 	/**
-	 * User name of admin, used to check the access of a user to remote connections
+	 * User name of the default admin, used to check the access of a user to remote connections
 	 */
 	public static final String RM_SERVER_CONFIGURATION_USER_ADMIN = "admin";
 
@@ -174,21 +176,57 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	 */
 	public static final String RM_SERVER_CONFIGURATION_SOURCE_NAME_LOCAL = "123%%%local%%%123";
 
+	/** @since 8.2.1 */
+	private static final String CONFIGURATION_TAG = "configuration";
+
 	/** singleton instance */
 	private static ConfigurationManager theInstance;
 
 	/** Map from {@link Configurator#getTypeId()} to {@link Configurator}. */
 	private Map<String, AbstractConfigurator<? extends Configurable>> configurators = new TreeMap<>();
 
-	/** Loads configurations provided by this repository whenever the repository is connected. */
-	private ConnectionListener loadOnConnectListener = new ConnectionListener() {
+	/** Loads configurations provided by this repository whenever the repository is connected
+	 * and removes them again when the repository is disconnected. */
+	private ConnectionListener updateOnConnectionStateListener = new ConnectionListener() {
 
 		@Override
-		public void connectionLost(RemoteRepository rmServer) {}
+		public void connectionLost(ConnectionRepository rmServer) {
+			if (rmServer instanceof  RemoteRepository) {
+				removeFromRepository((RemoteRepository) rmServer);
+			}
+		}
 
 		@Override
-		public void connectionEstablished(RemoteRepository rmServer) {
-			loadFromRepository(rmServer);
+		public void connectionEstablished(ConnectionRepository rmServer) {
+			if (rmServer instanceof  RemoteRepository) {
+				loadFromRepository((RemoteRepository) rmServer);
+			}
+		}
+	};
+
+	/**
+	 * Adds and removes listeners and configurables for {@link RemoteRepository RemoteRepositories}.
+	 *
+	 * @since 8.2.1
+	 */
+	private RepositoryManagerListener updateOnRepoManagerListener = new RepositoryManagerListener() {
+
+		@Override
+		public void repositoryWasAdded(Repository repository) {
+			if (repository instanceof  RemoteRepository) {
+				loadFromRepository((RemoteRepository) repository);
+				((RemoteRepository) repository).addConnectionListener(updateOnConnectionStateListener);
+				repository.addRepositoryListener(loadOnRefreshListener);
+			}
+		}
+
+		@Override
+		public void repositoryWasRemoved(Repository repository) {
+			if (repository instanceof  RemoteRepository) {
+				removeFromRepository((RemoteRepository) repository);
+				((RemoteRepository) repository).removeConnectionListener(updateOnConnectionStateListener);
+				repository.removeRepositoryListener(loadOnRefreshListener);
+			}
 		}
 	};
 
@@ -197,7 +235,7 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 
 		@Override
 		public void folderRefreshed(Folder folder) {
-			if (folder instanceof RemoteRepository) {
+			if (folder instanceof RemoteRepository && consumeRefreshRequest(((RemoteRepository) folder).getRepository())) {
 				loadFromRepository((RemoteRepository) folder);
 			}
 		}
@@ -217,6 +255,9 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 
 	/** mapping between configuration type ids and configurables */
 	private Map<String, Map<ComparablePair<String, String>, Configurable>> configurables = new HashMap<>();
+
+	/** stores refresh requests **/
+	private Map<RemoteRepository, Integer> refreshRequests = Collections.synchronizedMap(new WeakHashMap<>());
 
 	/** mapping configurables to permitted groups */
 	private static Map<String, Map<ComparablePair<String, String>, Set<String>>> permittedGroups = new HashMap<>();
@@ -337,6 +378,22 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	}
 
 	/**
+	 * Refreshes the given repository
+	 *
+	 * @param source The repository that should be refreshed
+	 * @throws RepositoryException if the refresh failed
+	 */
+	public void refresh(RemoteRepository source) throws RepositoryException {
+		refreshRequests.merge(source, 1, Integer::sum);
+		try {
+			source.refresh();
+		} catch (RepositoryException e) {
+			refreshRequests.remove(source);
+			throw e;
+		}
+	}
+
+	/**
 	 * Returns all configurable names. Better to use
 	 * {@link #getAllConfigurableNamesAndSources(String)}.
 	 *
@@ -394,26 +451,11 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 		if (nameAndSourceToConfigurable == null) {
 			throw new ConfigurationException("No such configuration type: " + typeId);
 		}
-		Configurable result = null;
-		// check first for local connections with this name
-		for (Pair<String, String> key : nameAndSourceToConfigurable.keySet()) {
-			if (key.getSecond().equals(ConfigurationManager.RM_SERVER_CONFIGURATION_SOURCE_NAME_LOCAL)) {
-				if (key.getFirst().equals(name)) {
-					result = nameAndSourceToConfigurable.get(key);
-					break;
-				}
-			}
-		}
-		// if there is no local connection with this name, search for a remote connection with this
-		// name
-		if (result == null) {
-			for (Pair<String, String> key : nameAndSourceToConfigurable.keySet()) {
-				if (key.getFirst().equals(name)) {
-					result = nameAndSourceToConfigurable.get(key);
-					break;
-				}
-			}
-		}
+		// check first for local connections with this name; if there is no local connection with this name,
+		// search for a remote connection with this name
+		Configurable result = nameAndSourceToConfigurable.keySet().stream().filter(key -> key.getFirst().equals(name))
+				.min(Comparator.comparing(key -> !key.getSecond().equals(ConfigurationManager.RM_SERVER_CONFIGURATION_SOURCE_NAME_LOCAL)))
+				.map(nameAndSourceToConfigurable::get).orElse(null);
 		if (result == null) {
 			AbstractConfigurator<? extends Configurable> configurator = configurators.get(typeId);
 			throw new ConfigurationException("No such configured object of name " + name + " of " + configurator.getName());
@@ -482,19 +524,11 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 			return;
 		}
 		loadConfiguration();
-		RepositoryManager.getInstance(null).addObserver(new Observer<Repository>() {
-
-			@Override
-			public void update(Observable<Repository> observable, final Repository arg) {
-				if (arg instanceof RemoteRepository) {
-					loadFromRepository((RemoteRepository) arg);
-					((RemoteRepository) arg).addConnectionListener(loadOnConnectListener);
-					arg.addRepositoryListener(loadOnRefreshListener);
-				}
-			}
-		}, false);
-		for (RemoteRepository ra : RepositoryManager.getInstance(null).getRemoteRepositories()) {
-			ra.addConnectionListener(this.loadOnConnectListener);
+		// add listeners to already registered repositories as well as to all upcoming ones
+		RepositoryManager repositoryManager = RepositoryManager.getInstance(null);
+		repositoryManager.addRepositoryManagerListener(updateOnRepoManagerListener);
+		for (RemoteRepository ra : repositoryManager.getRemoteRepositories()) {
+			ra.addConnectionListener(this.updateOnConnectionStateListener);
 			ra.addRepositoryListener(this.loadOnRefreshListener);
 		}
 		initialized = true;
@@ -515,7 +549,7 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 				Document doc = XMLTools.parse(connection.getInputStream());
 
 				Element root = doc.getDocumentElement();
-				if (!"configuration".equals(root.getTagName())) {
+				if (!CONFIGURATION_TAG.equals(root.getTagName())) {
 					throw new ConfigurationException("XML root tag must be <configuration>");
 				}
 
@@ -578,6 +612,59 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 		for (Observer<Pair<EventType, Configurable>> obs : observers) {
 			obs.update(this, new Pair<>(ConfigurableEvent.EventType.LOADED_FROM_REPOSITORY, config));
 		}
+	}
+
+	/**
+	 * Removes all {@link Configurable Configurables} that were pulled from the given repository
+	 * from the {@link ConfigurationManager}.
+	 *
+	 * @param ra
+	 * 		the remote repository whose configurables should be removed
+	 * @since 8.2.1
+	 */
+	private static void removeFromRepository (RemoteRepository ra) {
+		ConfigurationManager instance = getInstance();
+		instance.getAllConfigurables().stream().filter(c -> c.getSource() == ra)
+				.forEach(c -> instance.removeConfigurable(c.getTypeId(), c.getName(), ra.getAlias()));
+	}
+
+	/**
+	 * Checks if {@code requestCount} can be initialized or decremented
+	 *
+	 * @param repository
+	 * 		The repository that should be refreshed (unused)
+	 * @param requestCount
+	 * 		The current refresh request count
+	 * @return 0 if {@code requestCount} is {@code null}, {@code requestCount}-1 if {@code requestCount} > 0
+	 * @throws IllegalArgumentException
+	 * 		if {@code requestCount} is <= 0
+	 */
+	private static Integer decrementOrInitializeRequestCount(final RemoteRepository repository, final Integer requestCount) {
+		if (requestCount == null) {
+			//Initial call
+			return 0;
+		} else if (requestCount <= 0) {
+			//Already loaded, no request
+			throw new IllegalArgumentException("requestCount should not be 0");
+		} else {
+			//Request exists, decrement
+			return requestCount - 1;
+		}
+	}
+
+	/**
+	 * Atomically decrements the request counter
+	 *
+	 * @param source
+	 * @return true if a refresh request exists for the source
+	 */
+	private boolean consumeRefreshRequest(RemoteRepository source) {
+		try {
+			refreshRequests.compute(source, ConfigurationManager::decrementOrInitializeRequestCount);
+		} catch (IllegalArgumentException e) {
+			return false;
+		}
+		return true;
 	}
 
 	/**
@@ -748,7 +835,7 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 			permittedGroups.get(typeId).put(new ComparablePair<>(configurable.getName(), source), new HashSet<String>());
 		}
 
-		return permittedGroups.get(typeId).get(new ComparablePair<>(configurable.getName(), source));
+		return new HashSet<>(permittedGroups.get(typeId).get(new ComparablePair<>(configurable.getName(), source)));
 	}
 
 	/**
@@ -851,7 +938,7 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	 */
 	public Document getConfigurablesAsXML(AbstractConfigurator<? extends Configurable> configurator, boolean onlyLocal) {
 		Document doc = XMLTools.createDocument();
-		Element root = doc.createElement("configuration");
+		Element root = doc.createElement(CONFIGURATION_TAG);
 		doc.appendChild(root);
 		for (Configurable configurable : configurables.get(configurator.getTypeId()).values()) {
 			try {
@@ -904,7 +991,7 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	 */
 	public Document getConfigurablesAsXMLAndChangeEncryption(String typeId, List<Configurable> configurables, String source, Key decryptKey, Key encryptKey) {
 		Document doc = XMLTools.createDocument();
-		Element root = doc.createElement("configuration");
+		Element root = doc.createElement(CONFIGURATION_TAG);
 		doc.appendChild(root);
 		AbstractConfigurator<? extends Configurable> configurator = ConfigurationManager.getInstance()
 		        .getAbstractConfigurator(typeId);
@@ -1030,7 +1117,7 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	public Document getConfigurablesAsXMLAndChangeEncryption(AbstractConfigurator<? extends Configurable> configurator,
 	        boolean onlyLocal, Key decryptKey, Key encryptKey) {
 		Document doc = XMLTools.createDocument();
-		Element root = doc.createElement("configuration");
+		Element root = doc.createElement(CONFIGURATION_TAG);
 		doc.appendChild(root);
 		for (Configurable configurable : configurables.get(configurator.getTypeId()).values()) {
 			if (onlyLocal && configurable.getSource() != null) {
@@ -1055,6 +1142,19 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 		element.setAttribute("name", configurable.getName());
 		if (configurable.getId() != -1) {
 			element.setAttribute("id", String.valueOf(configurable.getId()));
+		}
+		String source = getSourceNameForConfigurable(configurable);
+		if (permittedGroups != null && permittedGroups.get(configurable.getTypeId()) != null && permittedGroups
+				.get(configurable.getTypeId()).get(new ComparablePair<>(configurable.getName(), source)) != null) {
+			Element permittedGroupsElement = doc.createElement("permittedGroups");
+			Set<String> configPermittedGroups = permittedGroups.get(configurable.getTypeId())
+					.get(new ComparablePair<>(configurable.getName(), source));
+			for (String group : configPermittedGroups) {
+				Element valueElement = doc.createElement("value");
+				valueElement.appendChild(doc.createTextNode(group));
+				permittedGroupsElement.appendChild(valueElement);
+			}
+			element.appendChild(permittedGroupsElement);
 		}
 		for (Entry<String, String> param : configurable.getParameters().entrySet()) {
 			String key = param.getKey();
@@ -1101,16 +1201,9 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	 */
 	public static Map<Pair<Integer, String>, Map<String, String>> fromXML(Document doc,
 	        AbstractConfigurator<? extends Configurable> configurator) throws ConfigurationException {
-		Map<Pair<Integer, String>, Map<String, String>> result = new TreeMap<>(new Comparator<Pair<Integer, String>>() {
-
-			@Override
-			public int compare(Pair<Integer, String> o1, Pair<Integer, String> o2) {
-				// cannot be null by contract
-				return o1.getSecond().compareTo(o2.getSecond());
-			}
-		});
+		Map<Pair<Integer, String>, Map<String, String>> result = new TreeMap<>(Comparator.comparing(Pair::getSecond));
 		Element root = doc.getDocumentElement();
-		if (!"configuration".equals(root.getTagName())) {
+		if (!CONFIGURATION_TAG.equals(root.getTagName())) {
 			throw new ConfigurationException("XML root tag must be <configuration>");
 		}
 
@@ -1148,7 +1241,7 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	 */
 	public static List<Pair<Integer, String>> newIdsFromXML(Document doc) throws ConfigurationException {
 		Element root = doc.getDocumentElement();
-		if (!"configuration".equals(root.getTagName())) {
+		if (!CONFIGURATION_TAG.equals(root.getTagName())) {
 			throw new ConfigurationException("XML root tag must be <configuration>");
 		}
 		List<Pair<Integer, String>> newIds = new LinkedList<>();
@@ -1173,17 +1266,10 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 	 */
 	public static Map<Pair<Integer, String>, Set<String>> permittedGroupsfromXML(Document doc,
 	        AbstractConfigurator<? extends Configurable> configurator) throws ConfigurationException {
-		Map<Pair<Integer, String>, Set<String>> result = new TreeMap<>(new Comparator<Pair<Integer, String>>() {
-
-			@Override
-			public int compare(Pair<Integer, String> o1, Pair<Integer, String> o2) {
-				// cannot be null by contract
-				return o1.getSecond().compareTo(o2.getSecond());
-			}
-		});
+		Map<Pair<Integer, String>, Set<String>> result = new TreeMap<>(Comparator.comparing(Pair::getSecond));
 
 		Element root = doc.getDocumentElement();
-		if (!"configuration".equals(root.getTagName())) {
+		if (!CONFIGURATION_TAG.equals(root.getTagName())) {
 			throw new ConfigurationException("XML root tag must be <configuration>");
 		}
 
@@ -1249,11 +1335,8 @@ public abstract class ConfigurationManager implements Observable<Pair<EventType,
 				Set<ComparablePair<String, String>> keySet = new HashSet<>(map.keySet());
 				for (ComparablePair<String, String> confKey : keySet) {
 
-					if (map.get(confKey).getSource() == null && source == null) {
-						map.remove(confKey);
-
-					} else
-					    if (map.get(confKey).getSource() != null && source != null && confKey.getSecond().equals(source)) {
+					boolean noRegConfSource = map.get(confKey).getSource() == null;
+					if (noRegConfSource && source == null || noRegConfSource && confKey.getSecond().equals(source)) {
 						map.remove(confKey);
 					}
 				}

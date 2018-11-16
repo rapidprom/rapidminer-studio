@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -285,16 +285,25 @@ public class RepositoryLocation {
 	public Folder createFoldersRecursively() throws RepositoryException {
 		Entry entry = locateEntry();
 		if (entry == null) {
-			Folder folder = parent().createFoldersRecursively();
-			Folder child = folder.createFolder(getName());
-			return child;
-		} else {
-			if (entry instanceof Folder) {
-				return (Folder) entry;
-			} else {
-				throw new RepositoryException(toString() + " is not a folder.");
+			Folder parentFolder = parent().createFoldersRecursively();
+			try {
+				entry = parentFolder.createFolder(getName());
+			} catch (RepositoryException re) {
+				//Recover from concurrent createFolder calls
+				entry = locateEntry();
+				//Rethrow the RepositoryException if recovery failed
+				if (!(entry instanceof Folder)) {
+					throw re;
+				}
 			}
 		}
+
+		if (entry instanceof Folder) {
+			return (Folder) entry;
+		} else {
+			throw new RepositoryException(toString() + " is not a folder.");
+		}
+
 	}
 
 	@Override

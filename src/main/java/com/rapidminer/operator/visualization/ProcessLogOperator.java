@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -341,6 +341,7 @@ public class ProcessLogOperator extends Operator {
 				new ParameterTypeString(PARAMETER_COLUMN_NAME, "The name of the column in the process log."),
 				new ParameterTypeValue(PARAMETER_COLUMN_VALUE, "operator.OPERATORNAME.[value|parameter].VALUE_NAME"));
 		type.setExpert(false);
+		type.setPrimary(true);
 		types.add(type);
 
 		types.add(new ParameterTypeCategory(PARAMETER_SORTING_TYPE,

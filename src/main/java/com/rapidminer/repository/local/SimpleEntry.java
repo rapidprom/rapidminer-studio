@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -56,7 +56,7 @@ public abstract class SimpleEntry implements Entry {
 	private LocalRepository repository;
 	private SimpleFolder containingFolder;
 
-	SimpleEntry(String name, SimpleFolder containingFolder, LocalRepository repository) {
+	public SimpleEntry(String name, SimpleFolder containingFolder, LocalRepository repository) {
 		this.name = name;
 		this.repository = repository;
 		this.containingFolder = containingFolder;
@@ -92,11 +92,13 @@ public abstract class SimpleEntry implements Entry {
 
 	@Override
 	public boolean rename(String newName) throws RepositoryException {
-		checkRename(getContainingFolder(), newName);
+		Folder formerParent = getContainingFolder();
+		String formerName = getName();
+		checkRename(formerParent, newName);
 		handleRename(newName);
 		renameFile(getPropertiesFile(), newName);
 		this.name = newName;
-		getRepository().fireEntryRenamed(this);
+		getRepository().fireEntryMoved(this, formerParent, formerName);
 		return true;
 	}
 

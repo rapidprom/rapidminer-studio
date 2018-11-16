@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -62,6 +62,8 @@ public abstract class FileValueCellEditor extends AbstractCellEditor implements 
 
 	private final GridBagLayout gridBagLayout = new GridBagLayout();
 
+	private JButton button;
+
 	public FileValueCellEditor(ParameterTypeFile type) {
 		this.type = type;
 		panel.setLayout(gridBagLayout);
@@ -119,6 +121,8 @@ public abstract class FileValueCellEditor extends AbstractCellEditor implements 
 		c.insets = new Insets(0, 5, 0, 0);
 		gridBagLayout.setConstraints(button, c);
 		panel.add(button);
+
+		this.button = button;
 	}
 
 	private void buttonPressed() {
@@ -164,6 +168,13 @@ public abstract class FileValueCellEditor extends AbstractCellEditor implements 
 	@Override
 	public boolean useEditorAsRenderer() {
 		return true;
+	}
+
+	@Override
+	public void activate() {
+		if (button != null) {
+			button.doClick();
+		}
 	}
 
 }

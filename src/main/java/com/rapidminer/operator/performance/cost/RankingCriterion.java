@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -88,7 +88,7 @@ public class RankingCriterion extends MeasuredPerformance {
 		while (intervallIndex < rankIntervallStarts.length - 1 && rankIntervallStarts[intervallIndex + 1] <= rank) {
 			intervallIndex++;
 		}
-		if (rank >= rankIntervallStarts[0]) {
+		if (rankIntervallStarts.length > 0 && rank >= rankIntervallStarts[0]) {
 			// otherwise not defined costs: Assume 0
 			costs += rankIntervallCost[intervallIndex];
 		}

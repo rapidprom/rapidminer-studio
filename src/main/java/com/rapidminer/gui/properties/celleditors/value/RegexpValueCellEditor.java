@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -155,5 +155,10 @@ public class RegexpValueCellEditor extends AbstractCellEditor implements Propert
 			int row, int column) {
 		textField.setText(value == null ? "" : value.toString());
 		return panel;
+	}
+
+	@Override
+	public void activate() {
+		button.doClick();
 	}
 }

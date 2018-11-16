@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -19,6 +19,7 @@
 package com.rapidminer.operator.ports.impl;
 
 import com.rapidminer.Process;
+import com.rapidminer.adaption.belt.AtPortConverter;
 import com.rapidminer.operator.DebugMode;
 import com.rapidminer.operator.IOObject;
 import com.rapidminer.operator.ports.OutputPorts;
@@ -40,6 +41,10 @@ public class OutputPortImpl extends AbstractOutputPort {
 
 	@Override
 	public void deliver(IOObject object) {
+		// Convert data sets using project Belts API. Please note that this API is work in progress and not meant for
+		// public use yet.
+		object = AtPortConverter.convertIfNecessary(object, this);
+
 		// registering history of object
 		if (object != null) {
 			object.appendOperatorToHistory(getPorts().getOwner().getOperator(), this);

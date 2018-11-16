@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -26,7 +26,7 @@ import com.rapidminer.repository.DataEntry;
  */
 public abstract class SimpleDataEntry extends SimpleEntry implements DataEntry {
 
-	SimpleDataEntry(String name, SimpleFolder containingFolder, LocalRepository localRepository) {
+	public SimpleDataEntry(String name, SimpleFolder containingFolder, LocalRepository localRepository) {
 		super(name, containingFolder, localRepository);
 	}
 

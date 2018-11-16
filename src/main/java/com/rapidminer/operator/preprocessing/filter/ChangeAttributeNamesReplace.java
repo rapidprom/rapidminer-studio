@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -17,6 +17,11 @@
  * If not, see http://www.gnu.org/licenses/.
 */
 package com.rapidminer.operator.preprocessing.filter;
+
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import com.rapidminer.example.Attribute;
 import com.rapidminer.example.ExampleSet;
@@ -36,11 +41,6 @@ import com.rapidminer.parameter.ParameterTypeRegexp;
 import com.rapidminer.parameter.ParameterTypeString;
 import com.rapidminer.parameter.UndefinedParameterError;
 import com.rapidminer.tools.OperatorResourceConsumptionHandler;
-
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 
 /**
@@ -104,8 +104,6 @@ public class ChangeAttributeNamesReplace extends AbstractDataProcessing {
 			}
 		} catch (IndexOutOfBoundsException e) {
 			throw new UserError(this, 215, replaceByString, PARAMETER_REPLACE_WHAT);
-		} catch (IllegalArgumentException e) {
-			throw new UserError(this, 152, replaceByString);
 		}
 
 		return exampleSet;
@@ -120,6 +118,7 @@ public class ChangeAttributeNamesReplace extends AbstractDataProcessing {
 				"A regular expression defining what should be replaced in the attribute names.", "\\W");
 		type.setShowRange(false);
 		type.setExpert(false);
+		type.setPrimary(true);
 		types.add(type);
 
 		types.add(new ParameterTypeString(PARAMETER_REPLACE_BY,

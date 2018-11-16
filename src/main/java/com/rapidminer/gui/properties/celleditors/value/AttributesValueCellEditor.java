@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -126,6 +126,11 @@ public class AttributesValueCellEditor extends AbstractCellEditor implements Pro
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
 			int row, int column) {
 		return button;
+	}
+
+	@Override
+	public void activate() {
+		button.doClick();
 	}
 
 }

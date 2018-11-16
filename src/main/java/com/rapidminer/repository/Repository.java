@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -18,10 +18,10 @@
 */
 package com.rapidminer.repository;
 
-import com.rapidminer.repository.gui.RepositoryConfigurationPanel;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+
+import com.rapidminer.repository.gui.RepositoryConfigurationPanel;
 
 
 /**
@@ -29,37 +29,39 @@ import org.w3c.dom.Element;
  */
 public interface Repository extends Folder {
 
-	public void addRepositoryListener(RepositoryListener l);
+	void addRepositoryListener(RepositoryListener l);
 
-	public void removeRepositoryListener(RepositoryListener l);
+	void removeRepositoryListener(RepositoryListener l);
 
 	/**
 	 * This will return the entry if existing or null if it can't be found.
 	 */
-	public Entry locate(String string) throws RepositoryException;
+	Entry locate(String string) throws RepositoryException;
 
 	/** Returns some user readable information about the state of this repository. */
-	public String getState();
+	String getState();
 
 	/** Returns the icon name for the repository. */
-	public String getIconName();
+	String getIconName();
 
 	/** Returns a piece of XML to store the repository in a configuration file. */
-	public Element createXML(Document doc);
+	Element createXML(Document doc);
 
-	public abstract boolean shouldSave();
+	boolean shouldSave();
 
 	/**
-	 * Called after the repository is added. Currently unused, but may be useful. Was once used to
-	 * fetch JDBC connection entries from remote server.
+	 * Called after the repository is added.
 	 */
-	public void postInstall();
+	void postInstall();
 
-	public void preRemove();
+	/**
+	 * Called directly before the repository is removed.
+	 */
+	void preRemove();
 
 	/** Returns true if the repository is configurable. In that case, */
-	public boolean isConfigurable();
+	boolean isConfigurable();
 
 	/** Creates a configuration panel. */
-	public RepositoryConfigurationPanel makeConfigurationPanel();
+	RepositoryConfigurationPanel makeConfigurationPanel();
 }

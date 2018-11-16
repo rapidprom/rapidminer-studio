@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -120,7 +120,7 @@ public class SettingsTabs extends ExtendedJTabbedPane {
 	 *            The containing dialog. Is used to create {@link ToolTipWindow}s for tabs.
 	 * @param filter
 	 *            Used to filter the setting parameters
-	 * @param cache
+	 * @param propertyCache
 	 *            which should be used to retrieve the values
 	 */
 	public SettingsTabs(SettingsDialog settingsDialog, String filter, Properties propertyCache) {

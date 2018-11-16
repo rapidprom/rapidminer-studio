@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -88,7 +88,7 @@ public class OpenAction extends ResourceAction {
 
 	public static void open() {
 		if (RapidMinerGUI.getMainFrame().close()) {
-			String locationString = RepositoryLocationChooser.selectLocation(null, null, RapidMinerGUI.getMainFrame(), true,
+			String locationString = RepositoryLocationChooser.selectLocation(null, null, RapidMinerGUI.getMainFrame().getExtensionsMenu(), true,
 					false);
 			if (locationString != null) {
 				try {

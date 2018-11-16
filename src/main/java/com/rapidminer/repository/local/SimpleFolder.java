@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -19,6 +19,7 @@
 package com.rapidminer.repository.local;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -54,7 +55,7 @@ public class SimpleFolder extends SimpleEntry implements Folder, DateEntry {
 	private final Lock readLock = lock.readLock();
 	private final Lock writeLock = lock.writeLock();
 
-	SimpleFolder(String name, SimpleFolder parent, LocalRepository repository) {
+	public SimpleFolder(String name, SimpleFolder parent, LocalRepository repository) {
 		super(name, parent, repository);
 	}
 
@@ -86,7 +87,7 @@ public class SimpleFolder extends SimpleEntry implements Folder, DateEntry {
 		acquireReadLock();
 		try {
 			if (isLoaded()) {
-				return Collections.unmodifiableList(data);
+				return Collections.unmodifiableList(new ArrayList<>(data));
 			}
 		} finally {
 			releaseReadLock();
@@ -94,7 +95,7 @@ public class SimpleFolder extends SimpleEntry implements Folder, DateEntry {
 		acquireWriteLock();
 		try {
 			ensureLoaded();
-			return Collections.unmodifiableList(data);
+			return Collections.unmodifiableList(new ArrayList<>(data));
 		} finally {
 			releaseWriteLock();
 		}
@@ -105,7 +106,7 @@ public class SimpleFolder extends SimpleEntry implements Folder, DateEntry {
 		acquireReadLock();
 		try {
 			if (isLoaded()) {
-				return Collections.unmodifiableList(folders);
+				return Collections.unmodifiableList(new ArrayList<>(folders));
 			}
 		} finally {
 			releaseReadLock();
@@ -113,7 +114,7 @@ public class SimpleFolder extends SimpleEntry implements Folder, DateEntry {
 		acquireWriteLock();
 		try {
 			ensureLoaded();
-			return Collections.unmodifiableList(folders);
+			return Collections.unmodifiableList(new ArrayList<>(folders));
 		} finally {
 			releaseWriteLock();
 		}
@@ -229,11 +230,6 @@ public class SimpleFolder extends SimpleEntry implements Folder, DateEntry {
 	@Override
 	public boolean isReadOnly() {
 		return false;
-	}
-
-	@Override
-	public String getType() {
-		return Folder.TYPE_NAME;
 	}
 
 	@Override
@@ -378,7 +374,23 @@ public class SimpleFolder extends SimpleEntry implements Folder, DateEntry {
 	@Override
 	public boolean canRefreshChild(String childName) throws RepositoryException {
 		// check existence of properties file
-		return new File(getFile(), childName + SimpleEntry.PROPERTIES_SUFFIX).exists();
+		childName += SimpleEntry.PROPERTIES_SUFFIX;
+		File propFile = new File(getFile(), childName);
+		if (!propFile.exists()) {
+			return false;
+		}
+		try {
+			// Relevant for Windows only; since file system is case insensitive, we have to be sure
+			// that the referenced path is correct in regards to cases; the canonical path on Windows
+			// will return the proper cased path (if it exists)
+			// see https://stackoverflow.com/a/7896461, especially second comment
+			if (!propFile.getCanonicalPath().endsWith(childName)) {
+				return false;
+			}
+		} catch (IOException e) {
+			return false;
+		}
+		return true;
 	}
 
 	private void acquireReadLock() throws RepositoryException {

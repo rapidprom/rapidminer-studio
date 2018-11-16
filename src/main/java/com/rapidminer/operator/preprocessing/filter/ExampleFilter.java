@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -229,6 +229,7 @@ public class ExampleFilter extends AbstractDataProcessing {
 		type.registerDependencyCondition(new EqualStringCondition(this, PARAMETER_CONDITION_CLASS, false,
 				ConditionedExampleSet.KNOWN_CONDITION_NAMES[ConditionedExampleSet.CONDITION_CUSTOM_FILTER]));
 		type.setExpert(false);
+		type.setPrimary(true);
 		types.add(type);
 
 		type = new ParameterTypeString(PARAMETER_PARAMETER_STRING,

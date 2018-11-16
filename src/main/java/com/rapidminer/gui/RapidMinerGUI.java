@@ -1,6 +1,6 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
- * 
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
+ *
  * Complete list of developers available at our web site:
  * 
  * http://rapidminer.com
@@ -34,8 +34,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.Policy;
 import java.util.Arrays;
@@ -45,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
-
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
@@ -58,6 +55,8 @@ import com.rapidminer.RapidMiner;
 import com.rapidminer.RepositoryProcessLocation;
 import com.rapidminer.core.io.data.source.DataSourceFactoryRegistry;
 import com.rapidminer.gui.actions.OpenAction;
+import com.rapidminer.gui.actions.search.ActionsGlobalSearch;
+import com.rapidminer.gui.actions.search.ActionsGlobalSearchGUIProvider;
 import com.rapidminer.gui.autosave.AutoSave;
 import com.rapidminer.gui.dialog.EULADialog;
 import com.rapidminer.gui.docking.RapidDockableContainerFactory;
@@ -66,8 +65,14 @@ import com.rapidminer.gui.license.LicenseTools;
 import com.rapidminer.gui.look.RapidLookAndFeel;
 import com.rapidminer.gui.look.fc.BookmarkIO;
 import com.rapidminer.gui.look.ui.RapidDockingUISettings;
+import com.rapidminer.gui.osx.OSXAdapter;
 import com.rapidminer.gui.plotter.PlotterPanel;
+import com.rapidminer.gui.processeditor.search.OperatorGlobalSearch;
+import com.rapidminer.gui.processeditor.search.OperatorGlobalSearchGUIProvider;
 import com.rapidminer.gui.safemode.SafeMode;
+import com.rapidminer.gui.search.GlobalSearchGUIRegistry;
+import com.rapidminer.gui.search.GlobalSearchPanel;
+import com.rapidminer.gui.security.BlacklistedOperatorProcessEditor;
 import com.rapidminer.gui.tools.SwingTools;
 import com.rapidminer.gui.tools.dialogs.DecisionRememberingConfirmDialog;
 import com.rapidminer.gui.tools.logging.LogHandlerModel;
@@ -83,6 +88,10 @@ import com.rapidminer.parameter.ParameterTypeInt;
 import com.rapidminer.repository.MalformedRepositoryLocationException;
 import com.rapidminer.repository.RepositoryLocation;
 import com.rapidminer.repository.RepositoryManager;
+import com.rapidminer.repository.gui.search.RepositoryGlobalSearchGUIProvider;
+import com.rapidminer.repository.search.RepositoryGlobalSearch;
+import com.rapidminer.search.GlobalSearchIndexer;
+import com.rapidminer.search.GlobalSearchRegistry;
 import com.rapidminer.security.PluginSandboxPolicy;
 import com.rapidminer.security.PluginSecurityManager;
 import com.rapidminer.studio.io.data.internal.file.LocalFileDataSourceFactory;
@@ -96,11 +105,12 @@ import com.rapidminer.tools.LaunchListener;
 import com.rapidminer.tools.LaunchListener.RemoteControlHandler;
 import com.rapidminer.tools.LogService;
 import com.rapidminer.tools.ParameterService;
+import com.rapidminer.tools.PlatformUtilities;
+import com.rapidminer.tools.RMUrlHandler;
 import com.rapidminer.tools.SystemInfoUtilities;
 import com.rapidminer.tools.SystemInfoUtilities.OperatingSystem;
 import com.rapidminer.tools.Tools;
 import com.rapidminer.tools.plugin.Plugin;
-import com.rapidminer.tools.update.internal.UpdateManagerRegistry;
 import com.rapidminer.tools.usagestats.CallToActionScheduler;
 import com.rapidminer.tools.usagestats.UsageStatistics;
 import com.rapidminer.tools.usagestats.UsageStatsScheduler;
@@ -173,6 +183,10 @@ public class RapidMinerGUI extends RapidMiner {
 
 	public static final String PROPERTY_RAPIDMINER_GUI_PURCHASED_NOT_INSTALLED_CHECK = "rapidminer.update.purchased.not_installed.check";
 	public static final String PROPERTY_RAPIDMINER_GUI_UPDATE_CHECK = "rapidminer.update.check";
+
+	// Admin Settings
+	public static final String PROPERTY_RAPIDMINER_DISALLOW_REMEMBER_PASSWORD = "rapidminer.disallow.remember.password";
+	public static final String PROPERTY_RAPIDMINER_DISALLOW_STUDIO_UPDATE = "rapidminer.disallow.studio.update";
 
 	static {
 
@@ -272,7 +286,7 @@ public class RapidMinerGUI extends RapidMiner {
 		// ----------------------------------------------------------
 	}
 
-	private static final int NUMBER_OF_RECENT_FILES = 8;
+	private static final int NUMBER_OF_RECENT_FILES = 10;
 
 	private static MainFrame mainFrame;
 
@@ -301,7 +315,6 @@ public class RapidMinerGUI extends RapidMiner {
 				LogService.getRoot().log(Level.INFO, "com.rapidminer.gui.RapidMinerGUI.running_shutdown_sequence");
 				RapidMinerGUI.getMainFrame().getPerspectiveController().shutdown();
 				RapidMinerGUI.saveRecentFileList();
-				RapidMinerGUI.saveGUIProperties();
 				UsageStatistics.getInstance().save();
 				RepositoryManager.shutdown();
 				UsageStatsScheduler.transmitOnShutdown();
@@ -327,6 +340,8 @@ public class RapidMinerGUI extends RapidMiner {
 		DockingUISettings.setInstance(new RapidDockingUISettings());
 		DockableContainerFactory.setFactory(new RapidDockableContainerFactory());
 
+		LogService.getRoot().log(Level.INFO, "com.rapidminer.gui.RapidMinerGUI.start_version", new Object[] {RapidMiner.getLongVersion(), PlatformUtilities.getReleasePlatform()} );
+
 		// inform listeners that splash is about to be shown
 		for (GUIStartupListener sl : startupListener) {
 			try {
@@ -338,12 +353,21 @@ public class RapidMinerGUI extends RapidMiner {
 
 		RapidMiner.showSplash();
 
+		RapidMiner.splashMessage("plaf");
+		setupToolTipManager();
+		setupGUI();
+		FontTools.checkAndSetFallbackUIFont();
+
 		RapidMiner.splashMessage("basic");
+
+		// initialize Global Search framework
+		GlobalSearchIndexer.INSTANCE.initialize();
 
 		// initialize RapidMiner
 		// As side effect this also initialized the ConstraintManager
 		// with the default product and constraints
 		RapidMiner.init();
+
 
 		// store (possibly new) active license (necessary, since no
 		// ACTIVE_LICENSE_CHANGED event is fired on startup)
@@ -366,24 +390,12 @@ public class RapidMinerGUI extends RapidMiner {
 		LogModelRegistry.INSTANCE.register(defaultLogModel);
 
 		RapidMiner.splashMessage("workspace");
-		RapidMiner.splashMessage("plaf");
-
-		setupToolTipManager();
-		setupGUI();
-		FontTools.checkAndSetFallbackUIFont();
 
 		// check whether current EULA has been accepted
 		if (!EULADialog.getEULAAccepted()) {
 			// show EULA dialog
 			RapidMiner.splashMessage("eula");
-			SwingTools.invokeAndWait(new Runnable() {
-
-				@Override
-				public void run() {
-					EULADialog dialog = new EULADialog();
-					dialog.setVisible(true);
-				}
-			});
+			SwingTools.invokeAndWait(() -> new EULADialog().setVisible(true));
 		}
 
 		RapidMiner.splashMessage("history");
@@ -393,18 +405,17 @@ public class RapidMinerGUI extends RapidMiner {
 
 		RapidMiner.splashMessage("create_frame");
 
-		SwingUtilities.invokeAndWait(new Runnable() {
-
-			@Override
-			public void run() {
-				setMainFrame(new MainFrame());
-			}
-		});
+		SwingUtilities.invokeAndWait(() -> setMainFrame(new MainFrame()));
 		RapidMiner.splashMessage("gui_properties");
 		loadGUIProperties(mainFrame);
+		
+		// initialize Global Search for actions
+		mainFrame.initActionsGlobalSearch();
 
 		RapidMiner.splashMessage("plugin_gui");
 		Plugin.initPluginGuis(mainFrame);
+		// reload the sample repository to include plugin resources
+		RepositoryManager.refreshSampleRepository();
 
 		// only load the perspective here after all plugins have registered
 		// their dockables
@@ -423,14 +434,9 @@ public class RapidMinerGUI extends RapidMiner {
 				LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.startup_listener_error", e);
 			}
 		}
+		mainFrame.addExtendedProcessEditor(new BlacklistedOperatorProcessEditor());
 
-		SwingUtilities.invokeAndWait(new Runnable() {
-
-			@Override
-			public void run() {
-				getMainFrame().finishInitialization();
-			}
-		});
+		SwingUtilities.invokeAndWait(mainFrame::finishInitialization);
 
 		RapidMiner.splashMessage("show_frame");
 
@@ -445,6 +451,20 @@ public class RapidMinerGUI extends RapidMiner {
 		// otherwise the last extension log is active
 		mainFrame.getLogViewer().getLogSelectionModel().setSelectedLogModel(RapidMinerGUI.getDefaultLogModel());
 
+		// Global Search GUI Provider initialization
+		if (GlobalSearchRegistry.INSTANCE.getSearchCategoryById(OperatorGlobalSearch.CATEGORY_ID) != null) {
+			GlobalSearchGUIRegistry.INSTANCE.registerSearchVisualizationProvider(GlobalSearchRegistry.INSTANCE.getSearchCategoryById(
+					OperatorGlobalSearch.CATEGORY_ID), new OperatorGlobalSearchGUIProvider());
+		}
+		if (GlobalSearchRegistry.INSTANCE.getSearchCategoryById(RepositoryGlobalSearch.CATEGORY_ID) != null) {
+			GlobalSearchGUIRegistry.INSTANCE.registerSearchVisualizationProvider(GlobalSearchRegistry.INSTANCE.getSearchCategoryById(
+					RepositoryGlobalSearch.CATEGORY_ID), new RepositoryGlobalSearchGUIProvider());
+		}
+		if (GlobalSearchRegistry.INSTANCE.getSearchCategoryById(ActionsGlobalSearch.CATEGORY_ID) != null) {
+			GlobalSearchGUIRegistry.INSTANCE.registerSearchVisualizationProvider(GlobalSearchRegistry.INSTANCE.getSearchCategoryById(
+					ActionsGlobalSearch.CATEGORY_ID), new ActionsGlobalSearchGUIProvider());
+		}
+		
 		RapidMiner.hideSplash();
 
 		// inform listeners that the Splash screen was hidden
@@ -455,6 +475,9 @@ public class RapidMinerGUI extends RapidMiner {
 				LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.startup_listener_error", e);
 			}
 		}
+
+		// init visualization after extensions had the chance to add their GUI providers as well
+		GlobalSearchPanel.getInstance().initializeSearchResultVisualization();
 
 		UsageStatsScheduler.init();
 
@@ -502,8 +525,8 @@ public class RapidMinerGUI extends RapidMiner {
 		// setup tool tip text manager
 		ToolTipManager manager = ToolTipManager.sharedInstance();
 		manager.setDismissDelay(25000); // original: 4000
-		manager.setInitialDelay(1500); // original: 750
-		manager.setReshowDelay(50); // original: 500
+		manager.setInitialDelay(1125);   // original: 750
+		manager.setReshowDelay(50);    // original: 500
 	}
 
 	/**
@@ -666,7 +689,7 @@ public class RapidMinerGUI extends RapidMiner {
 		}
 	}
 
-	private static void saveGUIProperties() {
+	static void saveGUIProperties() {
 		Properties properties = new Properties();
 		MainFrame mainFrame = getMainFrame();
 		if (mainFrame != null) {
@@ -741,7 +764,9 @@ public class RapidMinerGUI extends RapidMiner {
 					mainFrame.getPropertyPanel().setShowParameterHelp(true);
 				} else {
 					mainFrame.getPropertyPanel().setShowParameterHelp(Boolean.valueOf(showHelpProperty).booleanValue());
-
+				}
+				if (SystemInfoUtilities.getOperatingSystem() == OperatingSystem.OSX) {
+					OSXAdapter.checkForFullScreen(mainFrame);
 				}
 			} catch (NumberFormatException e) {
 				setDefaultGUIProperties();
@@ -783,7 +808,7 @@ public class RapidMinerGUI extends RapidMiner {
 				if (args.length >= 1) {
 					String arg = args[0];
 					if (arg.startsWith(RapidMiner.RAPIDMINER_URL_PREFIX)) {
-						handleRapidMinerURL(args[0]);
+						RMUrlHandler.handleUrl(args[0]);
 					} else if (!args[0].trim().isEmpty()) {
 						OpenAction.open(args[0], false);
 					}
@@ -825,8 +850,10 @@ public class RapidMinerGUI extends RapidMiner {
 		RapidMiner.setInputHandler(new GUIInputHandler());
 
 		new RapidMinerGUI().run(openLocation);
+		// make sure urls of type 'rm://{action}' can be used
+		RMUrlHandler.initActions();
 		if (rapidminerURL != null) {
-			handleRapidMinerURL(rapidminerURL);
+			RMUrlHandler.handleUrl(rapidminerURL);
 		}
 	}
 
@@ -852,67 +879,20 @@ public class RapidMinerGUI extends RapidMiner {
 		}
 	}
 
+	/**
+	 * @deprecated since 7.0, use {@link com.rapidminer.gui.look.Colors} constants instead
+	 */
+	@Deprecated
 	public static Color getBodyHighlightColor() {
 		return new Color(255, 255, 242);
 	}
 
+	/**
+	 * @deprecated since 7.0, use {@link com.rapidminer.gui.look.Colors} constants instead
+	 */
+	@Deprecated
 	public static Color getBorderHighlightColor() {
 		return SwingTools.RAPIDMINER_ORANGE;
-	}
-
-	/**
-	 * Called with rapidminer:// URLs passed as command line arguments.
-	 * Currently the only supported pattern is
-	 * rapidminer://extension/{extensionkey} to install an extension with the
-	 * given name.
-	 *
-	 * This method just logs a warning method if it cannot handle the
-	 * rapidminer:// URL for syntactical reasons.
-	 *
-	 * @throws IllegalArgumentException
-	 *             if this is not a rapidminer:// url
-	 */
-	private static void handleRapidMinerURL(String urlStr) {
-		URI url;
-
-		try {
-			url = new URI(urlStr);
-		} catch (URISyntaxException e) {
-			LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.malformed_rapidminer_url",
-					new Object[] { urlStr, e.getMessage() });
-			return;
-		}
-
-		if (!"rapidminer".equals(url.getScheme())) {
-			// in this case we should not be called, so throw
-			throw new IllegalArgumentException("Can handle only " + RapidMiner.RAPIDMINER_URL_PREFIX + " URLs!");
-		}
-		String path = url.getPath();
-		if (path.startsWith("/")) {
-			path = path.substring(1);
-		}
-		String components[] = path.split("/");
-		if (components.length < 2) {
-			LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.unknown_rapidminer_url",
-					new Object[] { urlStr });
-			return;
-		}
-		switch (components[0]) {
-		case "extension":
-			String extensionKey = components[1];
-			// asynchronous
-			try {
-				UpdateManagerRegistry.INSTANCE.get().showUpdateDialog(false, extensionKey);
-			} catch (URISyntaxException | IOException e) {
-				LogService.getRoot().log(Level.WARNING,
-						"com.rapidminer.gui.RapidMinerGUI.error_connecting_to_updateserver", e);
-			}
-			break;
-		default:
-			LogService.getRoot().log(Level.WARNING, "com.rapidminer.gui.RapidMinerGUI.unknown_rapidminer_url",
-					new Object[] { urlStr });
-			return;
-		}
 	}
 
 	/**

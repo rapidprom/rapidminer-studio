@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -66,6 +66,7 @@ import com.rapidminer.operator.learner.CapabilityProvider;
 import com.rapidminer.tools.GroupTree;
 import com.rapidminer.tools.I18N;
 import com.rapidminer.tools.OperatorService;
+import com.rapidminer.tools.usagestats.ActionStatisticsCollector;
 
 
 /**
@@ -495,6 +496,7 @@ public final class NewOperatorDialog extends ButtonDialog {
 			Operator operator = getOperator();
 			if (operator != null) {
 				actions.insert(Collections.singletonList(operator));
+				ActionStatisticsCollector.INSTANCE.log(ActionStatisticsCollector.TYPE_NEW_OPERATOR_DIALOG, "inserted", operator.getOperatorDescription().getKey());
 			}
 		} catch (Exception ex) {
 			ex.printStackTrace();

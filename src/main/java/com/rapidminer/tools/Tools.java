@@ -1,18 +1,18 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
- * 
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
+ *
  * Complete list of developers available at our web site:
- * 
+ *
  * http://rapidminer.com
- * 
+ *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License as published by the Free Software Foundation, either version 3
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License along with this program.
  * If not, see http://www.gnu.org/licenses/.
 */
@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -66,10 +67,7 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
@@ -84,6 +82,7 @@ import com.rapidminer.gui.MainFrame;
 import com.rapidminer.gui.RapidMinerGUI;
 import com.rapidminer.gui.tools.VersionNumber;
 import com.rapidminer.io.process.XMLImporter;
+import com.rapidminer.io.process.XMLTools;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.operator.OperatorException;
 import com.rapidminer.operator.ProcessStoppedException;
@@ -188,7 +187,8 @@ public class Tools {
 	/** the current settings value of number of fraction digits shown */
 	private static int numberOfFractionDigits;
 
-	private static final LinkedList<ResourceSource> ALL_RESOURCE_SOURCES = new LinkedList<>();
+	private static final List<ResourceSource> ALL_RESOURCE_SOURCES = Collections.synchronizedList(new LinkedList<>());
+	private static final Map<String, ResourceSource> PLUGIN_RESOURCE_SOURCES = Collections.synchronizedMap(new HashMap<>());
 
 	public static final String RESOURCE_PREFIX = "com/rapidminer/resources/";
 
@@ -930,6 +930,52 @@ public class Tools {
 	}
 
 	/**
+	 * Waits for the required threads to die first. Then waits for the process to die and writes log messages.
+	 * Terminates if exit value is not 0. Terminates if the RapidMiner process execution was stopped by the user.
+	 *
+	 * @param operator
+	 * 		The current operator that will be checked for RapidMiner process execution break.
+	 * @param process
+	 * 		The process that should finish
+	 * @param name
+	 * 		Processname for logoutput.
+	 * @param threadsToBeFinishedFirst
+	 * 		The required {@link Thread Threads} to be joined before waiting for the process. Commonly used to read all outputs in those before waiting for the process itself.
+	 * @throws OperatorException
+	 * 		If the program execution failed the error will be thrown via an UserError.
+	 *
+	 * @author Andreas Timm
+	 * @since 8.2
+	 */
+	public static void waitForDependentProcess(final Operator operator, final Process process, final String name, Thread... threadsToBeFinishedFirst)
+			throws OperatorException {
+		boolean allThreadsFinished = false;
+		while (!allThreadsFinished) {
+			allThreadsFinished = true;
+			for (Thread t : threadsToBeFinishedFirst) {
+				if (!t.isAlive()) {
+					continue;
+				}
+				allThreadsFinished = false;
+				try {
+					t.join(200);
+				} catch (InterruptedException e) {
+					try {
+						operator.checkForStop();
+					} catch (ProcessStoppedException e1) {
+						LogService.getRoot().log(Level.INFO, "com.rapidminer.tools.Tools.terminating_process", name);
+						process.destroy();
+						throw e1;
+					}
+					Thread.currentThread().interrupt();
+				}
+			}
+		}
+
+		waitForProcess(operator, process, name);
+	}
+
+	/**
 	 * Waits for process to die and writes log messages. Terminates if exit value is not 0.
 	 */
 	public static void waitForProcess(final Operator operator, final Process process, final String name)
@@ -985,7 +1031,7 @@ public class Tools {
 		if (exitValue == 0) {
 			LogService.getRoot().log(Level.FINE, "com.rapidminer.tools.Tools.process_terminated_successfully", name);
 		} else {
-			throw new UserError(operator, 306, new Object[] { name, exitValue });
+			throw new UserError(operator, 306, new Object[]{name, exitValue});
 		}
 	}
 
@@ -997,6 +1043,42 @@ public class Tools {
 		MailUtilities.sendEmail(address, subject, content);
 	}
 
+	/**
+	 * Removes the given resource source. If the resource source was not registered before, does nothing.
+	 *
+	 * @param source
+	 * 		the resource source to remove
+	 * @since 9.0.0
+	 */
+	public static void removeResourceSource(ResourceSource source) {
+		ALL_RESOURCE_SOURCES.remove(source);
+	}
+
+	/**
+	 * Sets a resource source for a plugin. Note that for the same plugin, only the last set resource source will be used!
+	 *
+	 * @param pluginKey
+	 * 		the plugin key
+	 * @param source
+	 * 		the source
+	 * @since 9.0.0
+	 */
+	public static void setResourceSourceForPlugin(String pluginKey, ResourceSource source) {
+		PLUGIN_RESOURCE_SOURCES.put(pluginKey, source);
+	}
+
+	/**
+	 * Removes the resource source of the given plugin. If the plugin resource source was not registered before, does
+	 * nothing.
+	 *
+	 * @param pluginKey
+	 * 		* 		the plugin key for which the resource source should be removed
+	 * @since 9.0.0
+	 */
+	public static void removeResourceSourceForPlugin(String pluginKey) {
+		PLUGIN_RESOURCE_SOURCES.remove(pluginKey);
+	}
+
 	/** Adds a new resource source. Might be used by plugins etc. */
 	public static void addResourceSource(ResourceSource source) {
 		ALL_RESOURCE_SOURCES.add(source);
@@ -1004,7 +1086,7 @@ public class Tools {
 
 	/** Adds a new resource source before the others. Might be used by plugins etc. */
 	public static void prependResourceSource(ResourceSource source) {
-		ALL_RESOURCE_SOURCES.addFirst(source);
+		ALL_RESOURCE_SOURCES.add(0, source);
 	}
 
 	public static URL getResource(ClassLoader loader, String name) {
@@ -1022,12 +1104,20 @@ public class Tools {
 	 * only allowed to use '/' as separator instead of File.separator!
 	 */
 	public static URL getResource(String name) {
-		Iterator<ResourceSource> i = ALL_RESOURCE_SOURCES.iterator();
-		while (i.hasNext()) {
-			ResourceSource source = i.next();
-			URL url = source.getResource(name);
-			if (url != null) {
-				return url;
+		synchronized (ALL_RESOURCE_SOURCES) {
+			for (ResourceSource source : ALL_RESOURCE_SOURCES) {
+				URL url = source.getResource(name);
+				if (url != null) {
+					return url;
+				}
+			}
+		}
+		synchronized (PLUGIN_RESOURCE_SOURCES) {
+			for (ResourceSource pluginSource : PLUGIN_RESOURCE_SOURCES.values()) {
+				URL url = pluginSource.getResource(name);
+				if (url != null) {
+					return url;
+				}
 			}
 		}
 
@@ -1079,8 +1169,7 @@ public class Tools {
 		try (FileInputStream inStream = new FileInputStream(file)) {
 
 			try {
-				DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-				DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+				DocumentBuilder documentBuilder = XMLTools.createDocumentBuilder();
 				Document processXmlDocument = documentBuilder.parse(inStream);
 				XPathFactory xPathFactory = XPathFactory.newInstance();
 				XPath xPath = xPathFactory.newXPath();
@@ -1092,8 +1181,6 @@ public class Tools {
 			} catch (XPathExpressionException e) {
 				useFallback = true;
 			} catch (SAXException e) {
-				useFallback = true;
-			} catch (ParserConfigurationException e) {
 				useFallback = true;
 			} catch (IOException e) {
 				useFallback = true;
@@ -1723,18 +1810,14 @@ public class Tools {
 		if (index < 0) {
 			return "error";
 		}
-		final Character[] alphabet = new Character[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-				'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
-
-		// index -= 1; // adjust so it matches 0-indexed array rather than
-		// 1-indexed column
-
-		int quotient = index / 26;
-		if (quotient > 0) {
-			return getExcelColumnName(quotient - 1) + alphabet[index % 26].toString();
-		} else {
-			return alphabet[index % 26].toString();
-		}
+		index++;
+		StringBuilder builder = new StringBuilder();
+		do {
+			index--; // adjust column number to offset thinking
+			builder.append((char) ('A' + (index % 26)));
+			index /= 26;
+		} while (index > 0);
+		return builder.reverse().toString();
 	}
 
 	/**

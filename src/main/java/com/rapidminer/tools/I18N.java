@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -39,11 +39,14 @@ public class I18N {
 	private static final ExtensibleResourceBundle GUI_BUNDLE;
 	private static final ExtensibleResourceBundle SETTINGS_BUNDLE;
 
+	private static final Locale ORIGINAL_LOCALE;
+
 	public static final String SETTINGS_TYPE_TITLE_SUFFIX = ".title";
 	public static final String SETTINGS_TYPE_DESCRIPTION_SUFFIX = ".description";
 
 	// init I18N
 	static {
+		ORIGINAL_LOCALE = Locale.getDefault();
 		ParameterService.init();
 
 		String localeLanguage = ParameterService.getParameterValue(RapidMiner.PROPERTY_RAPIDMINER_GENERAL_LOCALE_LANGUAGE);
@@ -188,7 +191,7 @@ public class I18N {
 			}
 
 		} catch (MissingResourceException e) {
-			LogService.getRoot().log(Level.FINE, "com.rapidminer.tools.I18N.missing_key", key);
+			LogService.getRoot().log(Level.FINEST, "com.rapidminer.tools.I18N.missing_key", key);
 			return key;
 		}
 	}
@@ -286,5 +289,16 @@ public class I18N {
 		} else {
 			return completeKey;
 		}
+	}
+
+	/**
+	 * Gets the original result of {@link Locale#getDefault()} (before it is exchanged with a custom locale due to our
+	 * language chooser).
+	 *
+	 * @return the original default locale object before it is changed due to our I18N combobox
+	 * @since 8.2.1
+	 */
+	public static Locale getOriginalLocale() {
+		return ORIGINAL_LOCALE;
 	}
 }

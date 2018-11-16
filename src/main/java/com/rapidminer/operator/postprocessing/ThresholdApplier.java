@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  *
  * Complete list of developers available at our web site:
  *
@@ -82,8 +82,8 @@ public class ThresholdApplier extends Operator {
 		ExampleSet newExampleSet = (ExampleSet) exampleSet.clone();
 		Attribute newPredictedLabel = AttributeFactory.createAttribute(predictedLabel.getName(),
 				predictedLabel.getValueType());
-		newPredictedLabel.getMapping().mapString(predictedLabel.getMapping().mapIndex(zeroIndex));
-		newPredictedLabel.getMapping().mapString(predictedLabel.getMapping().mapIndex(oneIndex));
+		zeroIndex = newPredictedLabel.getMapping().mapString(predictedLabel.getMapping().mapIndex(zeroIndex));
+		oneIndex = newPredictedLabel.getMapping().mapString(predictedLabel.getMapping().mapIndex(oneIndex));
 		newExampleSet.getExampleTable().addAttribute(newPredictedLabel);
 		newExampleSet.getAttributes().setPredictedLabel(newPredictedLabel);
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -56,10 +56,10 @@ public class ConnectPortToRepositoryAction extends ResourceAction {
 		}
 		String location;
 		if (port instanceof OutputPort) {
-			location = RepositoryLocationChooser.selectLocation(processLoc, null, RapidMinerGUI.getMainFrame(), true, false,
+			location = RepositoryLocationChooser.selectLocation(processLoc, null, RapidMinerGUI.getMainFrame().getProcessPanel(), true, false,
 					false, false, false);
 		} else {
-			location = RepositoryLocationChooser.selectLocation(processLoc, null, RapidMinerGUI.getMainFrame(), true, false,
+			location = RepositoryLocationChooser.selectLocation(processLoc, null, RapidMinerGUI.getMainFrame().getProcessPanel(), true, false,
 					false, true, true);
 		}
 		if (location != null) {

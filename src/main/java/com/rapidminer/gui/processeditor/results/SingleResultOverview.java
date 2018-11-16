@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -45,7 +45,7 @@ import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 
 import com.rapidminer.Process;
-import com.rapidminer.example.ExampleSet;
+import com.rapidminer.adaption.belt.TableViewingTools;
 import com.rapidminer.gui.RapidMinerGUI;
 import com.rapidminer.gui.flow.processrendering.draw.ProcessDrawUtils;
 import com.rapidminer.gui.look.Colors;
@@ -175,7 +175,7 @@ public class SingleResultOverview extends JPanel {
 		}
 
 		String name = result.getClass().getSimpleName();
-		if (result instanceof ExampleSet) {
+		if (TableViewingTools.isDataTable(result)) {
 			main = makeMainLabel("<html>" + metaData.getDescription() + "</html>");
 			name = ((ResultObject) result).getName();
 		} else {

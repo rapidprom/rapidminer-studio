@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.rapidminer.RapidMiner;
+import com.rapidminer.adaption.belt.IOTable;
+import com.rapidminer.adaption.belt.TableViewingTools;
 import com.rapidminer.example.AttributeRole;
 import com.rapidminer.example.Attributes;
 import com.rapidminer.example.ExampleSet;
@@ -138,6 +140,10 @@ public class ExampleSetMetaData extends MetaData {
 			}
 		}
 		numberOfExamples = new MDInteger(exampleSet.size());
+	}
+
+	public ExampleSetMetaData(IOTable tableObject, boolean shortened) {
+		this(TableViewingTools.getView(tableObject), shortened, !shortened);
 	}
 
 	public AttributeMetaData getAttributeByName(String name) {

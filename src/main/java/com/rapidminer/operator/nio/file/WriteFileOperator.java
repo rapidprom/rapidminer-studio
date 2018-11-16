@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -138,6 +138,7 @@ public class WriteFileOperator extends Operator {
 				false);
 		parameterTypeFile.registerDependencyCondition(new EqualTypeCondition(this, PARAMETER_DESTINATION_TYPE,
 				DESTINATION_TYPES, true, DESTINATION_TYPE_FILE));
+		parameterTypeFile.setPrimary(true);
 		parameterTypes.add(parameterTypeFile);
 
 		ParameterTypeRepositoryLocation parameterTypeRepositoryLocation = new ParameterTypeRepositoryLocation(

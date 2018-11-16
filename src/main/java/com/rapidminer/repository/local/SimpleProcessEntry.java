@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -36,7 +36,7 @@ public class SimpleProcessEntry extends SimpleDataEntry implements ProcessEntry 
 
 	private static final String RMP_SUFFIX = ".rmp";
 
-	SimpleProcessEntry(String name, SimpleFolder containingFolder, LocalRepository repository) {
+	public SimpleProcessEntry(String name, SimpleFolder containingFolder, LocalRepository repository) {
 		super(name, containingFolder, repository);
 	}
 
@@ -52,7 +52,11 @@ public class SimpleProcessEntry extends SimpleDataEntry implements ProcessEntry 
 	@Override
 	public void storeXML(String xml) throws RepositoryException {
 		try {
+			boolean existed = getFile().exists();
 			Tools.writeTextFile(getFile(), xml);
+			if (existed) {
+				getRepository().fireEntryChanged(this);
+			}
 		} catch (IOException e) {
 			throw new RepositoryException("Cannot write " + getFile() + ": " + e, e);
 		}
@@ -81,11 +85,6 @@ public class SimpleProcessEntry extends SimpleDataEntry implements ProcessEntry 
 	@Override
 	public String getDescription() {
 		return "Local process";
-	}
-
-	@Override
-	public String getType() {
-		return ProcessEntry.TYPE_NAME;
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  *
  * Complete list of developers available at our web site:
  *
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.logging.Level;
 
 import com.rapidminer.gui.tools.VersionNumber;
-import com.rapidminer.tools.I18N;
 import com.rapidminer.tools.LogService;
 
 

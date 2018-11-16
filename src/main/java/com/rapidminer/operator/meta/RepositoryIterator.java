@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  *
  * Complete list of developers available at our web site:
  *
@@ -171,6 +171,7 @@ public class RepositoryIterator extends AbstractRepositoryIterator {
 		ParameterTypeRepositoryLocation folder = new ParameterTypeRepositoryLocation(PARAMETER_DIRECTORY,
 				"Folder in the repository to iterate over", false, true, false);
 		folder.setExpert(false);
+		folder.setPrimary(true);
 		types.add(folder);
 
 		types.addAll(super.getParameterTypes());

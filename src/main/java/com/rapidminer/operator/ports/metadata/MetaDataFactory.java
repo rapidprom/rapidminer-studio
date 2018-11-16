@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -18,6 +18,7 @@
 */
 package com.rapidminer.operator.ports.metadata;
 
+import com.rapidminer.adaption.belt.IOTable;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.operator.Annotations;
 import com.rapidminer.operator.IOObject;
@@ -56,6 +57,7 @@ public class MetaDataFactory {
 
 	static {
 		MetaDataFactory.registerIOObjectMetaData(ExampleSet.class, ExampleSetMetaData.class);
+		MetaDataFactory.registerIOObjectMetaData(IOTable.class, ExampleSetMetaData.class);
 		MetaDataFactory.registerIOObjectMetaData(IOObjectCollection.class, CollectionMetaData.class);
 		MetaDataFactory.registerIOObjectMetaData(Model.class, ModelMetaData.class);
 	}

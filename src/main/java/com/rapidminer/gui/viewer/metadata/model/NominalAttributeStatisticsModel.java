@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -112,8 +112,11 @@ public class NominalAttributeStatisticsModel extends AbstractAttributeStatistics
 			nominalValues.clear();
 			while (i.hasNext()) {
 				String value = i.next();
-				nominalValues.add(new ValueAndCount(value, (int) exampleSet.getStatistics(getAttribute(), Statistics.COUNT,
-						value)));
+				if(value!=null) {
+					nominalValues.add(new ValueAndCount(value,
+							(int) exampleSet.getStatistics(getAttribute(), Statistics.COUNT,
+									value)));
+				}
 			}
 			Collections.sort(nominalValues);
 		}

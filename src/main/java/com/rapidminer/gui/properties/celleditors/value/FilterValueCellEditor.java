@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -18,19 +18,18 @@
 */
 package com.rapidminer.gui.properties.celleditors.value;
 
-import com.rapidminer.gui.properties.FilterPropertyDialog;
-import com.rapidminer.gui.tools.ResourceAction;
-import com.rapidminer.operator.Operator;
-import com.rapidminer.parameter.ParameterTypeFilter;
-
 import java.awt.Component;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
-
 import javax.swing.AbstractCellEditor;
 import javax.swing.CellEditor;
 import javax.swing.JButton;
 import javax.swing.JTable;
+
+import com.rapidminer.gui.properties.FilterPropertyDialog;
+import com.rapidminer.gui.tools.ResourceAction;
+import com.rapidminer.operator.Operator;
+import com.rapidminer.parameter.ParameterTypeFilter;
 
 
 /**
@@ -98,6 +97,11 @@ public class FilterValueCellEditor extends AbstractCellEditor implements Propert
 	@Override
 	public boolean rendersLabel() {
 		return false;
+	}
+
+	@Override
+	public void activate() {
+		button.doClick();
 	}
 
 }

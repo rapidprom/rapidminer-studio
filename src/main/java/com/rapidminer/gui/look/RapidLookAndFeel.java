@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  *
  * Complete list of developers available at our web site:
  *
@@ -57,6 +57,17 @@ public class RapidLookAndFeel extends BasicLookAndFeel {
 
 	/** the radius of RoundedRect corners */
 	public static final int CORNER_DEFAULT_RADIUS = 5;
+
+	/** the radius for tabs on the welcome dialog (since 8.2) */
+	public static final int CORNER_START_TAB_RADIUS = 8;
+	/** the space between tabs for the welcome dialog (since 8.2) */
+	public static final int START_TAB_GAP = 20;
+	/** the indentation fro the first tab of the welcome dialog (since 8.2) */
+	public static final int START_TAB_INDENT = 8;
+	/** top gap for the welcome dialog (since 8.2) */
+	public static final int START_DIALOG_TOP_GAP = 10;
+	/** set this client property to true for the tabbed pane in the welcome dialog (since 8.2) */
+	public static final String START_DIALOG_INDICATOR_PROPERTY = "com.rapidminer.StartDialog";
 
 	/** the radius of RoundedRect corners for tabs */
 	public static final int CORNER_TAB_RADIUS = 5;
@@ -365,7 +376,7 @@ public class RapidLookAndFeel extends BasicLookAndFeel {
 						"PAGE_DOWN", "scrollDown", "shift PAGE_DOWN", "scrollDownExtendSelection", CONTROL_ID + " A",
 						"selectAll", CONTROL_ID + " SLASH", "selectAll", CONTROL_ID + " BACK_SLASH", "clearSelection" }),
 				// MenuBar
-				"MenuBar.font", fontDialog12, "MenuBar.windowBindings", new Object[] { "F10", "takeFocus" }
+				"MenuBar.font", fontDialog12, "MenuBar.windowBindings", new Object[] {}
 
 				, "MenuBar.selectionForeground", Colors.TEXT_HIGHLIGHT_FOREGROUND,
 				// Menu Item
@@ -438,7 +449,7 @@ public class RapidLookAndFeel extends BasicLookAndFeel {
 				new UIDefaults.LazyInputMap(new Object[] { "UP", "negativeIncrement", "DOWN", "positiveIncrement", "LEFT",
 						"negativeIncrement", "RIGHT", "positiveIncrement", "KP_UP", "negativeIncrement", "KP_DOWN",
 						"positiveIncrement", "KP_LEFT", "negativeIncrement", "KP_RIGHT", "positiveIncrement", "HOME",
-						"selectMin", "END", "selectMax", "F8", "startResize", "F6", "toggleFocus", CONTROL_ID + " TAB",
+						"selectMin", "END", "selectMax", "HOME", "toggleFocus", CONTROL_ID + " TAB",
 						"focusOutForward", CONTROL_ID + " shift TAB", "focusOutBackward" }),
 
 				"SplitPaneDivider.border", null,

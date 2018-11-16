@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2001-2017 by RapidMiner and the contributors
+ * Copyright (C) 2001-2018 by RapidMiner and the contributors
  * 
  * Complete list of developers available at our web site:
  * 
@@ -118,11 +118,13 @@ class ActionStatisticsTable implements TableModel {
 		throw new UnsupportedOperationException("Table is immutable");
 	}
 
-	// Ignore listeners: no value changes anyway
+	@Override
+	public void addTableModelListener(TableModelListener l) {
+		// Ignore listeners: no value changes anyway
+	}
 
 	@Override
-	public void addTableModelListener(TableModelListener l) {}
-
-	@Override
-	public void removeTableModelListener(TableModelListener l) {}
+	public void removeTableModelListener(TableModelListener l) {
+		// Ignore listeners: no value changes anyway
+	}
 }
